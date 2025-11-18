@@ -1,0 +1,1208 @@
+import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
+import { Navigation } from "@/components/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AnimatedCard } from "@/components/ui/animated-card";
+import { OrgMessaging } from "@/components/org-messaging";
+import { 
+  Users, ChefHat, Dumbbell, BarChart3, MessageSquare, Calendar,
+  Search, Filter, Eye, Send, Plus, Clock, Activity, TrendingUp,
+  Award, ChevronRight, Building2, Target, Trophy, Star,
+  FileText, CheckCircle2, AlertCircle, User, Mail, Trash2, X
+} from "lucide-react";
+
+interface Client {
+  id: string;
+  name: string;
+  email: string;
+  activePlans: number;
+  lastActivity: string;
+  progress: number;
+  mealPlan?: string;
+  workoutPlan?: string;
+}
+
+interface Plan {
+  id: string;
+  name: string;
+  type: 'meal' | 'workout';
+  createdDate: string;
+  assignedCount: number;
+  description?: string;
+  weeks?: number;
+  isTemplate?: boolean;
+}
+
+interface Message {
+  id: string;
+  content: string;
+  sender: string;
+  timestamp: string;
+  type: 'announcement' | 'client' | 'organization';
+  isRead?: boolean;
+}
+
+interface MealDay {
+  breakfast: string;
+  lunch: string;
+  dinner: string;
+  snack: string;
+}
+
+interface WorkoutDay {
+  exercises: Array<{
+    name: string;
+    sets: number;
+    reps: string;
+    rest: number;
+  }>;
+}
+
+export default function CoachOrgDashboard() {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("clients");
+  const [searchTerm, setSearchTerm] = useState("");
+  
+  // Modal states
+  const [assignPlanOpen, setAssignPlanOpen] = useState(false);
+  const [viewClientOpen, setViewClientOpen] = useState(false);
+  const [createMealPlanOpen, setCreateMealPlanOpen] = useState(false);
+  const [createWorkoutPlanOpen, setCreateWorkoutPlanOpen] = useState(false);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+  const [selectedClient, setSelectedClient] = useState<Client | null>(null);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [itemToDelete, setItemToDelete] = useState<any>(null);
+  
+  // Form states
+  const [mealPlanForm, setMealPlanForm] = useState({ name: "", description: "", planData: "" });
+  const [workoutPlanForm, setWorkoutPlanForm] = useState({ name: "", description: "", planData: "" });
+  
+  // Visual plan builders
+  const [mealDays, setMealDays] = useState<Array<{day: string, meals: Array<{type: string, name: string, calories: string, protein: string, carbs: string, fats: string}>}>>([
+    { day: "Monday", meals: [] }
+  ]);
+  const [workoutDays, setWorkoutDays] = useState<Array<{day: string, exercises: Array<{name: string, sets: string, reps: string, rest: string}>}>>([
+    { day: "Monday", exercises: [] }
+  ]);
+  
+  const [assignForm, setAssignForm] = useState({
+    clientIds: [] as string[],
+    planType: "meal",
+    planId: "",
+    startDate: "",
+    endDate: ""
+  });
+  
+  const [messageContent, setMessageContent] = useState("");
+  const [messageType, setMessageType] = useState<"announcement" | "reply">("announcement");
+
+  // Get organization ID from user context
+  const orgId = (user as any)?.currentOrgId || 1;
+  const coachId = (user as any)?.id || 'coach-1';
+  const coachName = `${user?.firstName} ${user?.lastName}` || 'Coach';
+  const orgName = (user as any)?.organizationName || 'Fitness Organization';
+
+  // Queries
+  const { data: clientsResponse, isLoading: loadingClients } = useQuery({
+    queryKey: ['/api/organizations', orgId, 'clients'],
+    enabled: !!orgId
+  });
+
+  const { data: plansResponse, isLoading: loadingPlans } = useQuery({
+    queryKey: ['/api/organizations', orgId, 'plans'],
+    enabled: !!orgId
+  });
+
+  const { data: messagesData = [], isLoading: loadingMessages } = useQuery({
+    queryKey: ['/api/organizations', orgId, 'messages', coachId],
+    queryFn: async () => {
+      return [];
+    },
+    enabled: !!orgId && activeTab === 'messages'
+  });
+
+  // Transform API data to UI format
+  const clientsData: Client[] = ((clientsResponse as any)?.clients || []).map((client: any) => ({
+    id: client.id.toString(),
+    name: `${client.firstName} ${client.lastName}`,
+    email: client.email,
+    activePlans: client.activePlans || 0,
+    lastActivity: client.lastActivity || "No activity",
+    progress: client.progress || 0,
+    mealPlan: undefined,
+    workoutPlan: undefined
+  }));
+
+  // Combine meal plans and workout plans
+  const mealPlans = ((plansResponse as any)?.mealPlans || []).map((plan: any) => ({
+    id: plan.id.toString(),
+    name: plan.name,
+    type: 'meal' as const,
+    createdDate: plan.createdAt,
+    assignedCount: plan.assignedCount || 0,
+    weeks: plan.weekNumber,
+    isTemplate: plan.isTemplate
+  }));
+
+  const workoutPlans = ((plansResponse as any)?.workoutPlans || []).map((plan: any) => ({
+    id: plan.id.toString(),
+    name: plan.name,
+    type: 'workout' as const,
+    createdDate: plan.createdAt,
+    assignedCount: plan.assignedCount || 0,
+    weeks: plan.weekNumber,
+    isTemplate: plan.isTemplate
+  }));
+
+  const plansData: Plan[] = [...mealPlans, ...workoutPlans];
+
+  // Mutations
+  const createMealPlanMutation = useMutation({
+    mutationFn: (data: typeof mealPlanForm) => {
+      const planData = {
+        days: mealDays.map(day => ({
+          day: day.day,
+          meals: day.meals.map(meal => ({
+            type: meal.type,
+            name: meal.name,
+            calories: parseInt(meal.calories) || 0,
+            protein: parseInt(meal.protein) || 0,
+            carbs: parseInt(meal.carbs) || 0,
+            fats: parseInt(meal.fats) || 0
+          }))
+        }))
+      };
+      
+      return apiRequest(`/api/organizations/${orgId}/meal-plans`, 'POST', {
+        name: data.name,
+        description: data.description,
+        planData
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Meal plan created successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'plans'] });
+      setCreateMealPlanOpen(false);
+      setMealPlanForm({ name: "", description: "", planData: "" });
+      setMealDays([{ day: "Monday", meals: [] }]);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create meal plan", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const createWorkoutPlanMutation = useMutation({
+    mutationFn: (data: typeof workoutPlanForm) => {
+      const planData = {
+        days: workoutDays.map(day => ({
+          day: day.day,
+          exercises: day.exercises.map(ex => ({
+            name: ex.name,
+            sets: parseInt(ex.sets) || 0,
+            reps: parseInt(ex.reps) || 0,
+            rest: parseInt(ex.rest) || 0
+          }))
+        }))
+      };
+      
+      return apiRequest(`/api/organizations/${orgId}/workout-plans`, 'POST', {
+        name: data.name,
+        description: data.description,
+        planData
+      });
+    },
+    onSuccess: () => {
+      toast({ title: "Workout plan created successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'plans'] });
+      setCreateWorkoutPlanOpen(false);
+      setWorkoutPlanForm({ name: "", description: "", planData: "" });
+      setWorkoutDays([{ day: "Monday", exercises: [] }]);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to create workout plan", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  const assignPlanMutation = useMutation({
+    mutationFn: async (data: typeof assignForm) => {
+      return await apiRequest(
+        `/api/organizations/${orgId}/plans/assign`,
+        'POST',
+        {
+          clientIds: data.clientIds,
+          planId: parseInt(data.planId),
+          planType: data.planType,
+          startsAt: data.startDate, // API expects startsAt, not startDate
+          endsAt: data.endDate || undefined // API expects endsAt, not endDate
+        }
+      );
+    },
+    onSuccess: () => {
+      toast({ 
+        title: "Plan assigned successfully",
+        description: `The plan has been assigned to ${assignForm.clientIds.length} client(s).`
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'plans'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'users'] });
+      setAssignPlanOpen(false);
+      setAssignForm({
+        clientIds: [],
+        planType: "meal",
+        planId: "",
+        startDate: "",
+        endDate: ""
+      });
+    }
+  });
+
+  const sendMessageMutation = useMutation({
+    mutationFn: async (data: { content: string; type: string; recipients?: string[] }) => {
+      // Mock API call
+      console.log('Sending message:', data);
+      return { success: true };
+    },
+    onSuccess: () => {
+      toast({ title: "Message sent successfully" });
+      setMessageContent("");
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'messages'] });
+    }
+  });
+
+  const deleteItemMutation = useMutation({
+    mutationFn: async () => {
+      if (!itemToDelete) return;
+      const { type, id } = itemToDelete;
+      
+      if (type === 'plan') {
+        return apiRequest(`/api/organizations/${orgId}/plans/${id}`, 'DELETE');
+      }
+    },
+    onSuccess: () => {
+      toast({ title: "Plan deleted successfully" });
+      queryClient.invalidateQueries({ queryKey: ['/api/organizations', orgId, 'plans'] });
+      setDeleteConfirmOpen(false);
+      setItemToDelete(null);
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Failed to delete plan", 
+        description: error.message,
+        variant: "destructive" 
+      });
+    }
+  });
+
+  // Helper functions
+  const handleDelete = (type: string, id: number | string, name: string) => {
+    setItemToDelete({ type, id, name });
+    setDeleteConfirmOpen(true);
+  };
+
+  // Meal plan builder helpers
+  const addMealDay = () => {
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const nextDay = days[mealDays.length % 7];
+    setMealDays([...mealDays, { day: nextDay, meals: [] }]);
+  };
+
+  const removeMealDay = (index: number) => {
+    setMealDays(mealDays.filter((_, i) => i !== index));
+  };
+
+  const addMealToDay = (dayIndex: number) => {
+    const updated = [...mealDays];
+    updated[dayIndex].meals.push({ type: "Breakfast", name: "", calories: "", protein: "", carbs: "", fats: "" });
+    setMealDays(updated);
+  };
+
+  const removeMealFromDay = (dayIndex: number, mealIndex: number) => {
+    const updated = [...mealDays];
+    updated[dayIndex].meals.splice(mealIndex, 1);
+    setMealDays(updated);
+  };
+
+  const updateMeal = (dayIndex: number, mealIndex: number, field: string, value: string) => {
+    const updated = [...mealDays];
+    (updated[dayIndex].meals[mealIndex] as any)[field] = value;
+    setMealDays(updated);
+  };
+
+  // Workout plan builder helpers
+  const addWorkoutDay = () => {
+    const days = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    const nextDay = days[workoutDays.length % 7];
+    setWorkoutDays([...workoutDays, { day: nextDay, exercises: [] }]);
+  };
+
+  const removeWorkoutDay = (index: number) => {
+    setWorkoutDays(workoutDays.filter((_, i) => i !== index));
+  };
+
+  const addExerciseToDay = (dayIndex: number) => {
+    const updated = [...workoutDays];
+    updated[dayIndex].exercises.push({ name: "", sets: "", reps: "", rest: "" });
+    setWorkoutDays(updated);
+  };
+
+  const removeExerciseFromDay = (dayIndex: number, exerciseIndex: number) => {
+    const updated = [...workoutDays];
+    updated[dayIndex].exercises.splice(exerciseIndex, 1);
+    setWorkoutDays(updated);
+  };
+
+  const updateExercise = (dayIndex: number, exerciseIndex: number, field: string, value: string) => {
+    const updated = [...workoutDays];
+    (updated[dayIndex].exercises[exerciseIndex] as any)[field] = value;
+    setWorkoutDays(updated);
+  };
+
+  const filteredClients = clientsData.filter(client =>
+    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    client.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const stats = {
+    totalClients: clientsData.length,
+    activePlans: clientsData.reduce((acc, client) => acc + client.activePlans, 0),
+    avgProgress: Math.round(clientsData.reduce((acc, client) => acc + client.progress, 0) / clientsData.length),
+    completionRate: 87
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <Navigation />
+      
+      <div className="container mx-auto px-4 py-8">
+        {/* Header Section */}
+        <div className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-2xl p-8 mb-8 border border-teal-200 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="flex items-center space-x-3 mb-2">
+                <Building2 className="w-6 h-6 text-teal-600" />
+                <span className="text-teal-600/80 text-sm font-medium">{orgName}</span>
+              </div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                Welcome back, {coachName}!
+              </h1>
+              <p className="text-gray-700">Manage your clients and create personalized plans</p>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <AnimatedCard className="bg-white p-4 rounded-xl border border-teal-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm">Total Clients</p>
+                    <p className="text-2xl font-bold text-teal-600">{stats.totalClients}</p>
+                  </div>
+                  <Users className="w-8 h-8 text-teal-600/50" />
+                </div>
+              </AnimatedCard>
+              
+              <AnimatedCard className="bg-white p-4 rounded-xl border border-teal-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm">Active Plans</p>
+                    <p className="text-2xl font-bold text-teal-600">{stats.activePlans}</p>
+                  </div>
+                  <FileText className="w-8 h-8 text-teal-600/50" />
+                </div>
+              </AnimatedCard>
+              
+              <AnimatedCard className="bg-white p-4 rounded-xl border border-teal-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm">Avg Progress</p>
+                    <p className="text-2xl font-bold text-teal-600">{stats.avgProgress}%</p>
+                  </div>
+                  <TrendingUp className="w-8 h-8 text-teal-600/50" />
+                </div>
+              </AnimatedCard>
+              
+              <AnimatedCard className="bg-white p-4 rounded-xl border border-teal-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-gray-600 text-sm">Completion</p>
+                    <p className="text-2xl font-bold text-teal-600">{stats.completionRate}%</p>
+                  </div>
+                  <Trophy className="w-8 h-8 text-teal-600/50" />
+                </div>
+              </AnimatedCard>
+            </div>
+          </div>
+        </div>
+
+        {/* Tabbed Interface */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList className="grid w-full grid-cols-3 bg-gray-100 border border-gray-200">
+            <TabsTrigger value="clients" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white">
+              <Users className="w-4 h-4 mr-2" />
+              My Clients
+            </TabsTrigger>
+            <TabsTrigger value="plans" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white">
+              <FileText className="w-4 h-4 mr-2" />
+              Plans
+            </TabsTrigger>
+            <TabsTrigger value="progress" className="data-[state=active]:bg-teal-500 data-[state=active]:text-white">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Progress
+            </TabsTrigger>
+          </TabsList>
+
+          {/* My Clients Tab */}
+          <TabsContent value="clients" className="space-y-4">
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-gray-900">My Clients</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Manage and monitor your assigned clients
+                </CardDescription>
+                <div className="flex items-center space-x-2 mt-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-600 w-4 h-4" />
+                    <Input
+                      placeholder="Search clients..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-gray-50 border-gray-300 text-gray-900"
+                    />
+                  </div>
+                  <Button variant="outline" size="icon" className="border-gray-300">
+                    <Filter className="w-4 h-4" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow className="border-gray-200">
+                      <TableHead className="text-gray-600">Client Name</TableHead>
+                      <TableHead className="text-gray-600">Email</TableHead>
+                      <TableHead className="text-gray-600">Active Plans</TableHead>
+                      <TableHead className="text-gray-600">Last Activity</TableHead>
+                      <TableHead className="text-gray-600">Progress</TableHead>
+                      <TableHead className="text-gray-600">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {loadingClients ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center">
+                          <Skeleton className="h-8 w-full" />
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredClients.map((client) => (
+                        <TableRow key={client.id} className="border-gray-200">
+                          <TableCell className="font-medium text-gray-900">{client.name}</TableCell>
+                          <TableCell className="text-gray-700">{client.email}</TableCell>
+                          <TableCell className="text-gray-700">
+                            <Badge className="bg-teal-50 text-teal-700 border-teal-200">
+                              {client.activePlans} plans
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-gray-600">{client.lastActivity}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={client.progress} className="w-20 h-2" />
+                              <span className="text-gray-700 text-sm">{client.progress}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedClient(client);
+                                  setViewClientOpen(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-700"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                onClick={() => {
+                                  setAssignForm(prev => ({ ...prev, clientIds: [client.id] }));
+                                  setAssignPlanOpen(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-700"
+                              >
+                                <FileText className="w-4 h-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="sm"
+                                className="text-teal-600 hover:text-teal-700"
+                              >
+                                <Send className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Create Plans Tab */}
+          <TabsContent value="create-plans" className="space-y-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Meal Plan Creator */}
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <ChefHat className="w-5 h-5 mr-2 text-teal-600" />
+                    Create Meal Plan
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Design a custom meal plan for your clients
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Plan Name</Label>
+                    <Input
+                      placeholder="e.g., 30-Day Balanced Nutrition"
+                      value={mealPlanForm.name}
+                      onChange={(e) => setMealPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="bg-gray-50 border-gray-300 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Week</Label>
+                    <Select 
+                      value={mealPlanForm.week} 
+                      onValueChange={(value) => setMealPlanForm(prev => ({ ...prev, week: value }))}
+                    >
+                      <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Week 1</SelectItem>
+                        <SelectItem value="2">Week 2</SelectItem>
+                        <SelectItem value="3">Week 3</SelectItem>
+                        <SelectItem value="4">Week 4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-gray-700">7-Day Meal Plan</Label>
+                    <ScrollArea className="h-[300px] w-full rounded-md border border-gray-200 p-4">
+                      {Object.entries(mealPlanForm.days).map(([day, meals]) => (
+                        <div key={day} className="mb-4">
+                          <h4 className="text-teal-600 font-medium mb-2 capitalize">{day}</h4>
+                          <div className="grid grid-cols-2 gap-2">
+                            <Input
+                              placeholder="Breakfast"
+                              value={meals.breakfast}
+                              onChange={(e) => setMealPlanForm(prev => ({
+                                ...prev,
+                                days: { ...prev.days, [day]: { ...meals, breakfast: e.target.value } }
+                              }))}
+                              className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                            />
+                            <Input
+                              placeholder="Lunch"
+                              value={meals.lunch}
+                              onChange={(e) => setMealPlanForm(prev => ({
+                                ...prev,
+                                days: { ...prev.days, [day]: { ...meals, lunch: e.target.value } }
+                              }))}
+                              className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                            />
+                            <Input
+                              placeholder="Dinner"
+                              value={meals.dinner}
+                              onChange={(e) => setMealPlanForm(prev => ({
+                                ...prev,
+                                days: { ...prev.days, [day]: { ...meals, dinner: e.target.value } }
+                              }))}
+                              className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                            />
+                            <Input
+                              placeholder="Snack"
+                              value={meals.snack}
+                              onChange={(e) => setMealPlanForm(prev => ({
+                                ...prev,
+                                days: { ...prev.days, [day]: { ...meals, snack: e.target.value } }
+                              }))}
+                              className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </ScrollArea>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="meal-template"
+                      checked={mealPlanForm.saveAsTemplate}
+                      onCheckedChange={(checked) => 
+                        setMealPlanForm(prev => ({ ...prev, saveAsTemplate: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="meal-template" className="text-gray-700 cursor-pointer">
+                      Save as template for reuse
+                    </Label>
+                  </div>
+
+                  <Button 
+                    onClick={() => createMealPlanMutation.mutate(mealPlanForm)}
+                    disabled={createMealPlanMutation.isPending || !mealPlanForm.name}
+                    className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                  >
+                    {createMealPlanMutation.isPending ? "Creating..." : "Create Meal Plan"}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              {/* Workout Plan Creator */}
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center">
+                    <Dumbbell className="w-5 h-5 mr-2 text-teal-600" />
+                    Create Workout Plan
+                  </CardTitle>
+                  <CardDescription className="text-gray-600">
+                    Design a custom workout program
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Plan Name</Label>
+                    <Input
+                      placeholder="e.g., Strength Training Program"
+                      value={workoutPlanForm.name}
+                      onChange={(e) => setWorkoutPlanForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="bg-gray-50 border-gray-300 text-gray-900"
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Week</Label>
+                    <Select 
+                      value={workoutPlanForm.week} 
+                      onValueChange={(value) => setWorkoutPlanForm(prev => ({ ...prev, week: value }))}
+                    >
+                      <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Week 1</SelectItem>
+                        <SelectItem value="2">Week 2</SelectItem>
+                        <SelectItem value="3">Week 3</SelectItem>
+                        <SelectItem value="4">Week 4</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-3">
+                    <Label className="text-gray-700">7-Day Workout Plan</Label>
+                    <ScrollArea className="h-[300px] w-full rounded-md border border-gray-200 p-4">
+                      {Object.entries(workoutPlanForm.days).map(([day, exercises]) => (
+                        <div key={day} className="mb-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <h4 className="text-teal-600 font-medium capitalize">{day}</h4>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => addWorkoutExercise(day)}
+                              className="text-teal-600 border-teal-200 hover:bg-teal-50"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </Button>
+                          </div>
+                          {(exercises as any[]).length > 0 ? (
+                            (exercises as any[]).map((exercise, index) => (
+                              <div key={index} className="grid grid-cols-4 gap-2 mb-2">
+                                <Input
+                                  placeholder="Exercise"
+                                  value={exercise.name}
+                                  onChange={(e) => updateWorkoutExercise(day, index, 'name', e.target.value)}
+                                  className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                                />
+                                <Input
+                                  type="number"
+                                  placeholder="Sets"
+                                  value={exercise.sets}
+                                  onChange={(e) => updateWorkoutExercise(day, index, 'sets', parseInt(e.target.value))}
+                                  className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                                />
+                                <Input
+                                  placeholder="Reps"
+                                  value={exercise.reps}
+                                  onChange={(e) => updateWorkoutExercise(day, index, 'reps', e.target.value)}
+                                  className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                                />
+                                <Input
+                                  type="number"
+                                  placeholder="Rest (s)"
+                                  value={exercise.rest}
+                                  onChange={(e) => updateWorkoutExercise(day, index, 'rest', parseInt(e.target.value))}
+                                  className="bg-gray-50 border-gray-300 text-gray-900 text-sm"
+                                />
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-gray-500 text-sm">No exercises added. Click + to add.</p>
+                          )}
+                        </div>
+                      ))}
+                    </ScrollArea>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="workout-template"
+                      checked={workoutPlanForm.saveAsTemplate}
+                      onCheckedChange={(checked) => 
+                        setWorkoutPlanForm(prev => ({ ...prev, saveAsTemplate: checked as boolean }))
+                      }
+                    />
+                    <Label htmlFor="workout-template" className="text-gray-700 cursor-pointer">
+                      Save as template for reuse
+                    </Label>
+                  </div>
+
+                  <Button 
+                    onClick={() => createWorkoutPlanMutation.mutate(workoutPlanForm)}
+                    disabled={createWorkoutPlanMutation.isPending || !workoutPlanForm.name}
+                    className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                  >
+                    {createWorkoutPlanMutation.isPending ? "Creating..." : "Create Workout Plan"}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Assign Plans Tab */}
+          <TabsContent value="assign-plans" className="space-y-4">
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-gray-900">Assign Plans to Clients</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Select clients and assign meal or workout plans
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Select Clients</Label>
+                    <div className="border border-gray-300 rounded-lg p-4 bg-gray-50 max-h-[200px] overflow-y-auto">
+                      {clientsData.map((client) => (
+                        <div key={client.id} className="flex items-center space-x-2 mb-2">
+                          <Checkbox
+                            id={`client-${client.id}`}
+                            checked={assignForm.clientIds.includes(client.id)}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setAssignForm(prev => ({
+                                  ...prev,
+                                  clientIds: [...prev.clientIds, client.id]
+                                }));
+                              } else {
+                                setAssignForm(prev => ({
+                                  ...prev,
+                                  clientIds: prev.clientIds.filter(id => id !== client.id)
+                                }));
+                              }
+                            }}
+                          />
+                          <Label 
+                            htmlFor={`client-${client.id}`}
+                            className="text-gray-700 cursor-pointer flex-1"
+                          >
+                            {client.name}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Plan Type</Label>
+                    <Select 
+                      value={assignForm.planType} 
+                      onValueChange={(value) => setAssignForm(prev => ({ ...prev, planType: value, planId: "" }))}
+                    >
+                      <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="meal">Meal Plan</SelectItem>
+                        <SelectItem value="workout">Workout Plan</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Select Plan</Label>
+                    <Select 
+                      value={assignForm.planId} 
+                      onValueChange={(value) => setAssignForm(prev => ({ ...prev, planId: value }))}
+                    >
+                      <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                        <SelectValue placeholder="Choose a plan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {plansData
+                          .filter(plan => plan.type === assignForm.planType)
+                          .map(plan => (
+                            <SelectItem key={plan.id} value={plan.id}>
+                              {plan.name}
+                            </SelectItem>
+                          ))
+                        }
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">Start Date</Label>
+                    <Input
+                      type="date"
+                      value={assignForm.startDate}
+                      onChange={(e) => setAssignForm(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="bg-gray-50 border-gray-300 text-gray-900"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-gray-700">End Date (Optional)</Label>
+                    <Input
+                      type="date"
+                      value={assignForm.endDate}
+                      onChange={(e) => setAssignForm(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="bg-gray-50 border-gray-300 text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  onClick={() => assignPlanMutation.mutate(assignForm)}
+                  disabled={assignPlanMutation.isPending || assignForm.clientIds.length === 0 || !assignForm.planId || !assignForm.startDate}
+                  className="w-full bg-teal-600 hover:bg-teal-700 text-white"
+                >
+                  {assignPlanMutation.isPending ? "Assigning..." : "Assign Plan"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Messages Tab */}
+          <TabsContent value="messages" className="space-y-4">
+            <div className="h-[700px]">
+              <OrgMessaging 
+                userType="coach"
+                orgId={orgId}
+                embedded={true}
+                className="h-full"
+              />
+            </div>
+          </TabsContent>
+
+          {/* Client Progress Tab */}
+          <TabsContent value="progress" className="space-y-4">
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-gray-900">Client Progress Overview</CardTitle>
+                <CardDescription className="text-gray-600">
+                  Track and analyze your clients' performance
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  {/* Workout Completion */}
+                  <AnimatedCard className="bg-white p-6 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-medium text-gray-900">Workout Completion</h4>
+                      <Activity className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">This Week</span>
+                        <span className="text-teal-600 font-bold">85%</span>
+                      </div>
+                      <Progress value={85} className="h-2" />
+                      <p className="text-xs text-gray-500">+5% from last week</p>
+                    </div>
+                  </AnimatedCard>
+
+                  {/* Meal Plan Adherence */}
+                  <AnimatedCard className="bg-white p-6 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-medium text-gray-900">Meal Plan Adherence</h4>
+                      <ChefHat className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">This Week</span>
+                        <span className="text-teal-600 font-bold">78%</span>
+                      </div>
+                      <Progress value={78} className="h-2" />
+                      <p className="text-xs text-gray-500">+2% from last week</p>
+                    </div>
+                  </AnimatedCard>
+
+                  {/* Average Progress */}
+                  <AnimatedCard className="bg-white p-6 rounded-xl border border-gray-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <h4 className="text-lg font-medium text-gray-900">Average Progress</h4>
+                      <TrendingUp className="w-5 h-5 text-teal-600" />
+                    </div>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">All Clients</span>
+                        <span className="text-teal-600 font-bold">81%</span>
+                      </div>
+                      <Progress value={81} className="h-2" />
+                      <p className="text-xs text-green-500">Excellent performance!</p>
+                    </div>
+                  </AnimatedCard>
+                </div>
+
+                {/* Client Performance Table */}
+                <div className="mt-6">
+                  <h3 className="text-lg font-medium text-gray-900 mb-4">Individual Client Performance</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="border-gray-200">
+                        <TableHead className="text-gray-600">Client</TableHead>
+                        <TableHead className="text-gray-600">Workout Completion</TableHead>
+                        <TableHead className="text-gray-600">Meal Adherence</TableHead>
+                        <TableHead className="text-gray-600">Weight Trend</TableHead>
+                        <TableHead className="text-gray-600">Overall Progress</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {clientsData.map((client) => (
+                        <TableRow key={client.id} className="border-gray-200">
+                          <TableCell className="font-medium text-gray-900">{client.name}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={Math.random() * 30 + 70} className="w-16 h-2" />
+                              <span className="text-gray-700 text-sm">{Math.round(Math.random() * 30 + 70)}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={Math.random() * 30 + 60} className="w-16 h-2" />
+                              <span className="text-gray-700 text-sm">{Math.round(Math.random() * 30 + 60)}%</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`${Math.random() > 0.5 ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'}`}>
+                              {Math.random() > 0.5 ? '↓ -2.3 lbs' : '→ Stable'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Progress value={client.progress} className="w-16 h-2" />
+                              <span className="text-teal-600 font-medium">{client.progress}%</span>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <div className="flex justify-end mt-4">
+                  <Button 
+                    variant="outline" 
+                    className="border-teal-200 text-teal-600 hover:bg-teal-50"
+                    onClick={() => toast({ title: "Export feature coming soon!", description: "Progress reports will be available in the next update." })}
+                  >
+                    <FileText className="w-4 h-4 mr-2" />
+                    Export Progress Report
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        {/* View Client Dialog */}
+        <Dialog open={viewClientOpen} onOpenChange={setViewClientOpen}>
+          <DialogContent className="bg-white border-gray-200 text-gray-900 max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Client Details</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                View detailed information about {selectedClient?.name}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedClient && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-gray-600">Name</Label>
+                    <p className="text-gray-900 font-medium">{selectedClient.name}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Email</Label>
+                    <p className="text-gray-900 font-medium">{selectedClient.email}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Current Meal Plan</Label>
+                    <p className="text-teal-600">{selectedClient.mealPlan || "None assigned"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Current Workout Plan</Label>
+                    <p className="text-teal-600">{selectedClient.workoutPlan || "None assigned"}</p>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Progress</Label>
+                    <div className="flex items-center space-x-2 mt-1">
+                      <Progress value={selectedClient.progress} className="flex-1" />
+                      <span className="text-teal-600 font-medium">{selectedClient.progress}%</span>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-gray-600">Last Activity</Label>
+                    <p className="text-gray-900">{selectedClient.lastActivity}</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end space-x-2 mt-4">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      setAssignForm(prev => ({ ...prev, clientIds: [selectedClient.id] }));
+                      setViewClientOpen(false);
+                      setAssignPlanOpen(true);
+                    }}
+                    className="border-teal-200 text-teal-600 hover:bg-teal-50"
+                  >
+                    Assign New Plan
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    className="border-teal-200 text-teal-600 hover:bg-teal-50"
+                  >
+                    Send Message
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Assign Plan Dialog */}
+        <Dialog open={assignPlanOpen} onOpenChange={setAssignPlanOpen}>
+          <DialogContent className="bg-white border-gray-200 text-gray-900">
+            <DialogHeader>
+              <DialogTitle>Quick Assign Plan</DialogTitle>
+              <DialogDescription className="text-gray-600">
+                Assign a plan to selected client(s)
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-gray-700">Plan Type</Label>
+                <Select 
+                  value={assignForm.planType} 
+                  onValueChange={(value) => setAssignForm(prev => ({ ...prev, planType: value, planId: "" }))}
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="meal">Meal Plan</SelectItem>
+                    <SelectItem value="workout">Workout Plan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-700">Select Plan</Label>
+                <Select 
+                  value={assignForm.planId} 
+                  onValueChange={(value) => setAssignForm(prev => ({ ...prev, planId: value }))}
+                >
+                  <SelectTrigger className="bg-gray-50 border-gray-300 text-gray-900">
+                    <SelectValue placeholder="Choose a plan" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {plansData
+                      .filter(plan => plan.type === assignForm.planType)
+                      .map(plan => (
+                        <SelectItem key={plan.id} value={plan.id}>
+                          {plan.name}
+                        </SelectItem>
+                      ))
+                    }
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-700">Start Date</Label>
+                <Input
+                  type="date"
+                  value={assignForm.startDate}
+                  onChange={(e) => setAssignForm(prev => ({ ...prev, startDate: e.target.value }))}
+                  className="bg-gray-50 border-gray-300 text-gray-900"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-gray-700">End Date (Optional)</Label>
+                <Input
+                  type="date"
+                  value={assignForm.endDate}
+                  onChange={(e) => setAssignForm(prev => ({ ...prev, endDate: e.target.value }))}
+                  className="bg-gray-50 border-gray-300 text-gray-900"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button 
+                onClick={() => assignPlanMutation.mutate(assignForm)}
+                disabled={assignPlanMutation.isPending || !assignForm.planId || !assignForm.startDate}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+              >
+                {assignPlanMutation.isPending ? "Assigning..." : "Assign Plan"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </div>
+  );
+}

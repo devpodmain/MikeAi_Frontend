@@ -1,0 +1,100 @@
+class Profile(BaseModel):
+    user_id: str
+    full_name: Optional[str] = None
+    date_of_birth: Optional[str] = None
+    gender: Optional[Literal["male", "female", "other"]] = None
+    height: Optional[float] = Field(None, description="cm")
+    weight: Optional[float] = Field(None, description="kg")
+    activity_level: Optional[Literal["sedentary", "lightly_active", "active", "very_active"]] = None
+    fitness_goal: Optional[Literal["lose_weight", "maintain", "build_muscle"]] = None
+    target_weight: Optional[float] = None
+    daily_calorie_goal: Optional[int] = None
+    diet_type: Optional[Literal["none", "vegetarian", "vegan", "keto", "paleo", "mediterranean"]] = "none"
+    allergies: Optional[List[str]] = []
+    disliked_foods: Optional[str] = None
+    preferred_cuisines: Optional[List[str]] = []   # <- we’ll use this
+    meals_per_day: Optional[Literal["3_meals", "3_meals_2_snacks"]] = "3_meals"
+    intermittent_fasting: Optional[bool] = False
+    breakfast_time: Optional[str] = None
+    lunch_time: Optional[str] = None
+    dinner_time: Optional[str] = None
+    chronic_conditions: Optional[List[str]] = []
+    supplements_taken: Optional[str] = None
+    stress_level: Optional[Literal["low", "medium", "high"]] = None
+    sleep_duration: Optional[float] = None
+    water_intake_goal: Optional[float] = None
+    # legacy...
+    age: Optional[int] = None
+    goal: Optional[str] = None
+    dietary_preferences: Optional[List[str]] = None
+    allergens: Optional[str] = None
+    cultural_preferences: Optional[str] = None
+    target_calories: Optional[int] = None
+    target_protein: Optional[int] = None
+    target_carbs: Optional[int] = None
+    target_fats: Optional[int] = None
+
+class MealMacros(BaseModel):
+    protein: float
+    carbs: float
+    fat: float
+
+class Meal(BaseModel):
+    slot: Literal["breakfast", "lunch", "dinner", "snack1", "snack2"]
+    title: str
+    calories: CaloriesType
+    macros: MealMacros
+    ingredients: List[str]
+    instructions: str
+    allergen_flags: Optional[List[str]] = []
+    cuisine: Optional[str] = None
+    prep_time_min: Optional[int] = None
+
+class DayPlan(BaseModel):
+    date: str
+    meals: List[Meal]
+    total_calories: Optional[int] = None
+
+class Plan(BaseModel):
+    days: List[DayPlan]
+    metadata: Dict[str, Any]
+
+# ==== NEW: knobs for strictness / constraints ====
+class GenerateBody(BaseModel):
+    profile: Profile
+    days: DaysType = 7
+    mealsPerDay: Literal[3, 5] = 5
+    provider: Literal["openai"] = "openai"
+    model: Optional[str] = None
+    avoidTitlesGlobal: Optional[List[str]] = None
+
+    # Cuisine enforcement (defaults to profile.preferred_cuisines or ["Indian"])
+    enforceCuisine: bool = True
+    cuisineWhitelist: Optional[List[str]] = None  # e.g. ["Indian"]
+
+    # Repetition policy (Monday dish can repeat on Thursday -> gap=2)
+    minGapDays: int = 2
+
+    # Calorie control
+    enforceCalories: bool = True
+    calorieTolerancePct: float = 0.08  # +/- 8%
+    maxRebalanceAttempts: int = 2
+
+class GenerateResponse(BaseModel):
+    success: bool
+    plan: Plan
+    # NEW: echo the payload we received for debugging
+    received: Dict[str, Any]
+
+class RegenBody(BaseModel):
+    profile: Profile
+    provider: Literal["openai"] = "openai"
+    model: Optional[str] = None
+    day: str
+    slot: Literal["breakfast", "lunch", "dinner", "snack1", "snack2"]
+    constraints: Optional[Dict[str, Any]] = {}
+    context_meals_for_that_day: List[Meal] = []
+
+class RegenResponse(BaseModel):
+    success: bool
+    meal: Meal

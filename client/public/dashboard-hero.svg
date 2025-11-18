@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 200" fill="none">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#EEF2FF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E0E7FF;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F8FAFC;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="200" fill="url(#bg)" rx="15"/>
+  
+  <!-- Dashboard cards -->
+  <g transform="translate(20, 20)">
+    <!-- Progress card -->
+    <rect x="0" y="0" width="80" height="60" rx="8" fill="url(#card)" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="40" y="15" text-anchor="middle" fill="#1F2937" font-size="8" font-weight="bold">Progress</text>
+    <circle cx="40" cy="35" r="12" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+    <circle cx="40" cy="35" r="12" fill="none" stroke="#10B981" stroke-width="2" 
+            stroke-dasharray="50 25" stroke-dashoffset="0"/>
+    <text x="40" y="38" text-anchor="middle" fill="#10B981" font-size="6" font-weight="bold">75%</text>
+    <text x="40" y="52" text-anchor="middle" fill="#6B7280" font-size="5">Goal</text>
+    
+    <!-- Calories card -->
+    <rect x="90" y="0" width="80" height="60" rx="8" fill="url(#card)" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="130" y="15" text-anchor="middle" fill="#1F2937" font-size="8" font-weight="bold">Calories</text>
+    <text x="130" y="28" text-anchor="middle" fill="#EF4444" font-size="10" font-weight="bold">1,847</text>
+    <text x="130" y="38" text-anchor="middle" fill="#6B7280" font-size="5">of 2,200</text>
+    <!-- Flame icon -->
+    <path d="M125 45 Q127 42 130 45 Q133 42 135 45 Q133 48 130 47 Q127 48 125 45Z" fill="#EF4444"/>
+    <text x="130" y="55" text-anchor="middle" fill="#6B7280" font-size="5">kcal today</text>
+    
+    <!-- Water card -->
+    <rect x="180" y="0" width="80" height="60" rx="8" fill="url(#card)" stroke="#E2E8F0" stroke-width="1"/>
+    <text x="220" y="15" text-anchor="middle" fill="#1F2937" font-size="8" font-weight="bold">Water</text>
+    <text x="220" y="28" text-anchor="middle" fill="#06B6D4" font-size="10" font-weight="bold">6.2L</text>
+    <text x="220" y="38" text-anchor="middle" fill="#6B7280" font-size="5">of 8.0L</text>
+    <!-- Water drops -->
+    <ellipse cx="215" cy="47" rx="2" ry="3" fill="#06B6D4"/>
+    <ellipse cx="220" cy="45" rx="2" ry="3" fill="#06B6D4"/>
+    <ellipse cx="225" cy="47" rx="2" ry="3" fill="#06B6D4"/>
+    <text x="220" y="55" text-anchor="middle" fill="#6B7280" font-size="5">daily goal</text>
+  </g>
+  
+  <!-- Chart section -->
+  <g transform="translate(30, 90)">
+    <text x="0" y="0" fill="#1F2937" font-size="9" font-weight="bold">Weekly Activity</text>
+    <g transform="translate(0, 10)">
+      <!-- Chart bars -->
+      <rect x="10" y="40" width="8" height="20" fill="#3B82F6"/>
+      <rect x="25" y="35" width="8" height="25" fill="#10B981"/>
+      <rect x="40" y="30" width="8" height="30" fill="#EF4444"/>
+      <rect x="55" y="25" width="8" height="35" fill="#F59E0B"/>
+      <rect x="70" y="35" width="8" height="25" fill="#8B5CF6"/>
+      <rect x="85" y="40" width="8" height="20" fill="#EC4899"/>
+      <rect x="100" y="30" width="8" height="30" fill="#06B6D4"/>
+      
+      <!-- Days -->
+      <text x="14" y="70" text-anchor="middle" fill="#6B7280" font-size="5">M</text>
+      <text x="29" y="70" text-anchor="middle" fill="#6B7280" font-size="5">T</text>
+      <text x="44" y="70" text-anchor="middle" fill="#6B7280" font-size="5">W</text>
+      <text x="59" y="70" text-anchor="middle" fill="#6B7280" font-size="5">T</text>
+      <text x="74" y="70" text-anchor="middle" fill="#6B7280" font-size="5">F</text>
+      <text x="89" y="70" text-anchor="middle" fill="#6B7280" font-size="5">S</text>
+      <text x="104" y="70" text-anchor="middle" fill="#6B7280" font-size="5">S</text>
+    </g>
+  </g>
+  
+  <!-- Fitness goals -->
+  <g transform="translate(150, 90)">
+    <text x="0" y="0" fill="#1F2937" font-size="9" font-weight="bold">Today's Goals</text>
+    <g transform="translate(0, 15)">
+      <!-- Steps -->
+      <circle cx="5" cy="5" r="2" fill="#10B981"/>
+      <text x="12" y="8" fill="#1F2937" font-size="6">8,432 steps</text>
+      <text x="12" y="16" fill="#6B7280" font-size="5">Goal: 10,000</text>
+      
+      <!-- Workout -->
+      <circle cx="5" cy="25" r="2" fill="#3B82F6"/>
+      <text x="12" y="28" fill="#1F2937" font-size="6">45 min workout</text>
+      <text x="12" y="36" fill="#6B7280" font-size="5">Goal: 60 min</text>
+      
+      <!-- Sleep -->
+      <circle cx="5" cy="45" r="2" fill="#8B5CF6"/>
+      <text x="12" y="48" fill="#1F2937" font-size="6">7.5 hrs sleep</text>
+      <text x="12" y="56" fill="#6B7280" font-size="5">Goal: 8 hrs</text>
+    </g>
+  </g>
+  
+  <!-- Motivational elements -->
+  <g fill="#FCD34D" opacity="0.6">
+    <polygon points="270,30 272,35 277,35 273,38 275,43 270,40 265,43 267,38 263,35 268,35" transform="scale(0.5)"/>
+    <polygon points="280,160 282,165 287,165 283,168 285,173 280,170 275,173 277,168 273,165 278,165" transform="scale(0.4)"/>
+  </g>
+</svg>

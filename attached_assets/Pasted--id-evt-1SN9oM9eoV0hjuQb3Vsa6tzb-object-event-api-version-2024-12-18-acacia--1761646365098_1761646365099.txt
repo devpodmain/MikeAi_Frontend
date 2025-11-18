@@ -1,0 +1,154 @@
+{
+  "id": "evt_1SN9oM9eoV0hjuQb3Vsa6tzb",
+  "object": "event",
+  "api_version": "2024-12-18.acacia",
+  "created": 1761646049,
+  "data": {
+    "object": {
+      "id": "cs_test_a1yRadcxy5Xs4jnrNrciNKKy5NJkBYDDYAeAREgL5NHXojonQRCz20xtSE",
+      "object": "checkout.session",
+      "adaptive_pricing": {
+        "enabled": true
+      },
+      "after_expiration": null,
+      "allow_promotion_codes": null,
+      "amount_subtotal": 499,
+      "amount_total": 499,
+      "automatic_tax": {
+        "enabled": false,
+        "liability": null,
+        "provider": null,
+        "status": null
+      },
+      "billing_address_collection": null,
+      "branding_settings": {
+        "background_color": "#ffffff",
+        "border_style": "rounded",
+        "button_color": "#0074d4",
+        "display_name": "MikeAI- Test",
+        "font_family": "default",
+        "icon": null,
+        "logo": null
+      },
+      "cancel_url": "https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/subscription",
+      "client_reference_id": null,
+      "client_secret": null,
+      "collected_information": {
+        "business_name": null,
+        "individual_name": null,
+        "shipping_details": null
+      },
+      "consent": null,
+      "consent_collection": null,
+      "created": 1761646040,
+      "currency": "usd",
+      "currency_conversion": null,
+      "custom_fields": [],
+      "custom_text": {
+        "after_submit": null,
+        "shipping_address": null,
+        "submit": null,
+        "terms_of_service_acceptance": null
+      },
+      "customer": "cus_TJmiyZoEKZD8bR",
+      "customer_creation": null,
+      "customer_details": {
+        "address": {
+          "city": null,
+          "country": "IN",
+          "line1": null,
+          "line2": null,
+          "postal_code": null,
+          "state": null
+        },
+        "business_name": null,
+        "email": "ssandhiya252@gmail.com",
+        "individual_name": null,
+        "name": "Sandhiya Patel",
+        "phone": null,
+        "tax_exempt": "none",
+        "tax_ids": []
+      },
+      "customer_email": null,
+      "discounts": [],
+      "expires_at": 1761732440,
+      "invoice": null,
+      "invoice_creation": {
+        "enabled": false,
+        "invoice_data": {
+          "account_tax_ids": null,
+          "custom_fields": null,
+          "description": null,
+          "footer": null,
+          "issuer": null,
+          "metadata": {},
+          "rendering_options": null
+        }
+      },
+      "livemode": false,
+      "locale": null,
+      "metadata": {
+        "userName": "Sandhiya Patel",
+        "userEmail": "ssandhiya252@gmail.com",
+        "userId": "test-user-123",
+        "planId": "plus",
+        "planName": "PLUS - 30 Day Access"
+      },
+      "mode": "payment",
+      "origin_context": null,
+      "payment_intent": "pi_3SN9oK9eoV0hjuQb0FTbJ3tS",
+      "payment_link": null,
+      "payment_method_collection": "if_required",
+      "payment_method_configuration_details": null,
+      "payment_method_options": {
+        "card": {
+          "request_three_d_secure": "automatic"
+        }
+      },
+      "payment_method_types": [
+        "card"
+      ],
+      "payment_status": "paid",
+      "permissions": null,
+      "phone_number_collection": {
+        "enabled": false
+      },
+      "presentment_details": {
+        "presentment_amount": 45804,
+        "presentment_currency": "inr"
+      },
+      "recovered_from": null,
+      "saved_payment_method_options": {
+        "allow_redisplay_filters": [
+          "always"
+        ],
+        "payment_method_remove": "disabled",
+        "payment_method_save": null
+      },
+      "setup_intent": null,
+      "shipping_address_collection": null,
+      "shipping_cost": null,
+      "shipping_details": null,
+      "shipping_options": [],
+      "status": "complete",
+      "submit_type": null,
+      "subscription": null,
+      "success_url": "https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/subscription-success?session_id={CHECKOUT_SESSION_ID}",
+      "total_details": {
+        "amount_discount": 0,
+        "amount_shipping": 0,
+        "amount_tax": 0
+      },
+      "ui_mode": "hosted",
+      "url": null,
+      "wallet_options": null
+    }
+  },
+  "livemode": false,
+  "pending_webhooks": 1,
+  "request": {
+    "id": null,
+    "idempotency_key": null
+  },
+  "type": "checkout.session.completed"
+}

@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 40" fill="none">
+  <defs>
+    <linearGradient id="logo-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stopColor="#3B82F6" stopOpacity="1" />
+      <stop offset="50%" stopColor="#8B5CF6" stopOpacity="1" />
+      <stop offset="100%" stopColor="#EC4899" stopOpacity="1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Logo Icon -->
+  <g transform="translate(4, 8)">
+    <!-- Outer circle -->
+    <circle cx="12" cy="12" r="12" fill="url(#logo-gradient)"/>
+    
+    <!-- Inner design - representing health/fitness -->
+    <g transform="translate(12, 12)">
+      <!-- Heart shape -->
+      <path d="M0,-4 C-2,-6 -6,-6 -6,-2 C-6,0 -4,2 0,6 C4,2 6,0 6,-2 C6,-6 2,-6 0,-4 Z" fill="white" opacity="0.9"/>
+      
+      <!-- Pulse line -->
+      <path d="M-8,2 L-6,2 L-4,0 L-2,4 L0,0 L2,-2 L4,2 L6,2 L8,2" stroke="white" strokeWidth="1.5" fill="none" opacity="0.7"/>
+    </g>
+    
+    <!-- Activity rings -->
+    <circle cx="12" cy="12" r="9" fill="none" stroke="white" strokeWidth="1" opacity="0.3"/>
+    <circle cx="12" cy="12" r="6" fill="none" stroke="white" strokeWidth="1" opacity="0.3"/>
+  </g>
+  
+  <!-- Text -->
+  <g transform="translate(32, 8)">
+    <text x="0" y="16" fontFamily="Arial, sans-serif" fontSize="18" fontWeight="bold" fill="#1F2937">
+      ACTIV
+    </text>
+    <text x="0" y="28" fontFamily="Arial, sans-serif" fontSize="8" fill="#6B7280">
+      Nutrition & Fitness
+    </text>
+  </g>
+</svg>

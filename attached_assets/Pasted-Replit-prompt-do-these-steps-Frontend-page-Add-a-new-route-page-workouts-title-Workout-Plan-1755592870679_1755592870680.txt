@@ -1,0 +1,181 @@
+Replit prompt (do-these-steps)
+
+Frontend page
+
+Add a new route/page: /workouts (title: “Workout Plans”).
+
+On page load, fetch current user:
+
+Try in order: GET /auth/me → GET /profile/me → fallback to local user id.
+
+Keep ownerId and a profile object (sex, age, height_cm, weight_kg, activity_level, training_age_months).
+
+Show a form with these fields:
+
+Goal: hypertrophy | strength | fat_loss | general_fitness
+
+Split: auto | full-body | upper/lower | push/pull/legs
+
+Days/week: 2–7
+
+Session minutes: 30–120
+
+Where do you train? home | gym
+
+Map to equipment automatically:
+
+home → [bodyweight, dumbbell, bands, kettlebell]
+
+gym → [barbell, dumbbell, machine, cable, kettlebell, bodyweight]
+
+Let users tweak equipment chips.
+
+Injuries/constraints (optional): free text.
+
+On Generate Plan, call your backend (see #2) and, on success, reload the plan list.
+
+Backend contract (what the frontend will call)
+
+Create & save plan (AI):
+
+POST /workouts/ai
+
+Body:
+
+{
+  "ownerId": "<user_id>",
+  "profile": {
+    "user_id": "<user_id>",
+    "sex": "male|female|other",
+    "age": 28,
+    "height_cm": 178,
+    "weight_kg": 78,
+    "activity_level": "sedentary|light|moderate|high",
+    "training_age_months": 6
+  },
+  "prefs": {
+    "goal": "hypertrophy|strength|fat_loss|general_fitness",
+    "days_per_week": 4,
+    "session_minutes": 60,
+    "equipment": ["barbell","dumbbell","machine"],
+    "injuries": "optional text",
+    "desired_split": "auto|full-body|upper/lower|push/pull/legs"
+  },
+  "weeks": 8
+}
+
+
+Response (success):
+
+{ "success": true, "data": { "workoutId": 123, "plan_meta": { "name": "...", "goal": "...", "weeks": 8, "split": "..." } } }
+
+
+Backend behavior:
+
+Express calls FastAPI /ai/workouts/generate with the same body (minus ownerId).
+
+FastAPI returns a structured plan (days → items).
+
+Express persists: workouts row + workout_items rows.
+
+If an exercise name is unknown, create a minimal exercises row (name only).
+
+Return { workoutId }.
+
+List user plans:
+
+GET /workouts?ownerId=<user_id>
+
+Response:
+
+{ "success": true, "data": [ { "id": 123, "owner_id":"...", "name":"...", "goal":"...", "weeks":8, "created_at":"..." } ] }
+
+
+Plan items (for expand/view):
+
+GET /workouts/:id/items
+
+Response:
+
+{ "success": true, "data": [ { "id":1,"day_index":0,"order_index":0,"exercise_id":45,"sets":4,"reps":"6-8","rest_sec":120,"notes":null } ] }
+
+
+(Optional, nicer) Full plan view:
+
+GET /workouts/:id/full returns items joined with exercise names:
+
+{ "success": true, "data": { "workout": {...}, "days": [ { "dayIndex":0,"items":[ { "name":"Barbell Bench Press","sets":4,"reps":"6-8",... } ] } ] } }
+
+
+FastAPI (AI microservice) you already have
+
+Ensure a route exists: POST /ai/workouts/generate
+
+It must return only JSON shaped like:
+
+{
+  "name": "PPL 4-day (Hypertrophy)",
+  "goal": "hypertrophy",
+  "weeks": 8,
+  "days_per_week": 4,
+  "split": "push/pull/legs/upper",
+  "days": [
+    { "dayIndex": 0, "name": "Push", "items": [
+      { "exercise": "Barbell Bench Press", "equipment": "barbell", "sets": 4, "reps": "6-8", "rir": "1-2", "restSec": 120, "notes": "" }
+    ] }
+  ],
+  "progression_notes": "double-progression…",
+  "warmup_notes": "ramp sets…",
+  "deload": "week 8 reduce volume 30–40%…"
+}
+
+
+Express consumes this JSON and saves it.
+
+Frontend list & view
+
+On /workouts page, after generation, call GET /workouts?ownerId=... to show My Plans.
+
+Add an expand button per plan:
+
+Fetch GET /workouts/:id/items (or /workouts/:id/full if you added it).
+
+Group by day_index, sort by order_index.
+
+Display exercise name (via joined route or by fetching names for unique exercise_ids).
+
+Environment / wiring
+
+Frontend env: VITE_API_URL = <your Express base URL>
+
+Backend env (Express): FASTAPI_URL = <your FastAPI base URL>
+
+CORS: make sure Express allows your frontend origin.
+
+DB: tables present: exercises, workouts, workout_items (same ones you already use).
+
+Location → equipment rules (use exactly)
+
+home → ["bodyweight","dumbbell","bands","kettlebell"]
+
+gym → ["barbell","dumbbell","machine","cable","kettlebell","bodyweight"]
+
+Users can add/remove pieces before generating.
+
+Acceptance checklist (in the app, no CLI)
+
+Open /workouts.
+
+Page shows your user id (from /auth/me or fallback).
+
+Select: goal, split (or auto), days/week, session minutes, home/gym (equipment updates).
+
+Click Generate & Save Plan → success toast.
+
+My Plans lists the new plan on top (8 weeks).
+
+Expand plan → see days with ordered items and exercise names.
+
+Edit later (future step): add buttons to change sets/reps or swap exercises; wire to simple PATCH endpoints.
+
+That’s it. If any one of those endpoints is missing in your old backend, just add it using the contracts above—no need to change the rest of your stack.

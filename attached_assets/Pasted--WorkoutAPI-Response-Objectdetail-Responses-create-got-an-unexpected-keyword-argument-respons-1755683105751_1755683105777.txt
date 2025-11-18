@@ -1,0 +1,107 @@
+[WorkoutAPI] Response: Objectdetail: "Responses.create() got an unexpected keyword argument 'response_format'"[[Prototype]]: Objectconstructor: ƒ Object()hasOwnProperty: ƒ hasOwnProperty()isPrototypeOf: ƒ isPrototypeOf()propertyIsEnumerable: ƒ propertyIsEnumerable()toLocaleString: ƒ toLocaleString()toString: ƒ toString()valueOf: ƒ valueOf()__defineGetter__: ƒ __defineGetter__()__defineSetter__: ƒ __defineSetter__()__lookupGetter__: ƒ __lookupGetter__()__lookupSetter__: ƒ __lookupSetter__()__proto__: (...)get __proto__: ƒ __proto__()set __proto__: ƒ __proto__()length: 1name: "set __proto__"arguments: (...)caller: (...)[[Prototype]]: ƒ ()[[Scopes]]: Scopes[0]
+workoutPlanApi.ts:14 [WorkoutAPI] POST http://localhost:8000/ai/workouts/generate {profile: {…}, prefs: {…}, weeks: 8}
+workoutPlanApi.ts:25 [WorkoutAPI] Response: {success: true, data: {…}}
+chunk-RPCDYKBN.js?v=61e85cd0:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {weeks, notes}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-RPCDYKBN.js?v=61e85cd0:9934:17)
+    at createChild (chunk-RPCDYKBN.js?v=61e85cd0:10110:15)
+    at reconcileChildrenArray (chunk-RPCDYKBN.js?v=61e85cd0:10282:33)
+    at reconcileChildFibers2 (chunk-RPCDYKBN.js?v=61e85cd0:10559:24)
+    at reconcileChildren (chunk-RPCDYKBN.js?v=61e85cd0:14290:37)
+    at updateHostComponent (chunk-RPCDYKBN.js?v=61e85cd0:14807:11)
+    at beginWork (chunk-RPCDYKBN.js?v=61e85cd0:15935:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=61e85cd0:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=61e85cd0:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=61e85cd0:3733:39)
+throwOnInvalidObjectType @ chunk-RPCDYKBN.js?v=61e85cd0:9934
+createChild @ chunk-RPCDYKBN.js?v=61e85cd0:10110
+reconcileChildrenArray @ chunk-RPCDYKBN.js?v=61e85cd0:10282
+reconcileChildFibers2 @ chunk-RPCDYKBN.js?v=61e85cd0:10559
+reconcileChildren @ chunk-RPCDYKBN.js?v=61e85cd0:14290
+updateHostComponent @ chunk-RPCDYKBN.js?v=61e85cd0:14807
+beginWork @ chunk-RPCDYKBN.js?v=61e85cd0:15935
+callCallback2 @ chunk-RPCDYKBN.js?v=61e85cd0:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=61e85cd0:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=61e85cd0:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=61e85cd0:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=61e85cd0:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=61e85cd0:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=61e85cd0:19116
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=61e85cd0:18678
+workLoop @ chunk-RPCDYKBN.js?v=61e85cd0:197
+flushWork @ chunk-RPCDYKBN.js?v=61e85cd0:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=61e85cd0:384Understand this error
+chunk-RPCDYKBN.js?v=61e85cd0:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {weeks, notes}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-RPCDYKBN.js?v=61e85cd0:9934:17)
+    at createChild (chunk-RPCDYKBN.js?v=61e85cd0:10110:15)
+    at reconcileChildrenArray (chunk-RPCDYKBN.js?v=61e85cd0:10282:33)
+    at reconcileChildFibers2 (chunk-RPCDYKBN.js?v=61e85cd0:10559:24)
+    at reconcileChildren (chunk-RPCDYKBN.js?v=61e85cd0:14290:37)
+    at updateHostComponent (chunk-RPCDYKBN.js?v=61e85cd0:14807:11)
+    at beginWork (chunk-RPCDYKBN.js?v=61e85cd0:15935:22)
+    at HTMLUnknownElement.callCallback2 (chunk-RPCDYKBN.js?v=61e85cd0:3674:22)
+    at Object.invokeGuardedCallbackDev (chunk-RPCDYKBN.js?v=61e85cd0:3699:24)
+    at invokeGuardedCallback (chunk-RPCDYKBN.js?v=61e85cd0:3733:39)
+throwOnInvalidObjectType @ chunk-RPCDYKBN.js?v=61e85cd0:9934
+createChild @ chunk-RPCDYKBN.js?v=61e85cd0:10110
+reconcileChildrenArray @ chunk-RPCDYKBN.js?v=61e85cd0:10282
+reconcileChildFibers2 @ chunk-RPCDYKBN.js?v=61e85cd0:10559
+reconcileChildren @ chunk-RPCDYKBN.js?v=61e85cd0:14290
+updateHostComponent @ chunk-RPCDYKBN.js?v=61e85cd0:14807
+beginWork @ chunk-RPCDYKBN.js?v=61e85cd0:15935
+callCallback2 @ chunk-RPCDYKBN.js?v=61e85cd0:3674
+invokeGuardedCallbackDev @ chunk-RPCDYKBN.js?v=61e85cd0:3699
+invokeGuardedCallback @ chunk-RPCDYKBN.js?v=61e85cd0:3733
+beginWork$1 @ chunk-RPCDYKBN.js?v=61e85cd0:19765
+performUnitOfWork @ chunk-RPCDYKBN.js?v=61e85cd0:19198
+workLoopSync @ chunk-RPCDYKBN.js?v=61e85cd0:19137
+renderRootSync @ chunk-RPCDYKBN.js?v=61e85cd0:19116
+recoverFromConcurrentError @ chunk-RPCDYKBN.js?v=61e85cd0:18736
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=61e85cd0:18684
+workLoop @ chunk-RPCDYKBN.js?v=61e85cd0:197
+flushWork @ chunk-RPCDYKBN.js?v=61e85cd0:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=61e85cd0:384Understand this error
+chunk-RPCDYKBN.js?v=61e85cd0:14032 The above error occurred in the <div> component:
+
+    at div
+    at div
+    at _c9 (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/src/components/ui/card.tsx:114:12)
+    at div
+    at _c (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/src/components/ui/card.tsx:20:11)
+    at div
+    at WorkoutsPage (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/src/pages/workouts.tsx:30:31)
+    at Route (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=61e85cd0:323:16)
+    at Switch (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=61e85cd0:379:17)
+    at Router (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/src/App.tsx?v=XpeTMuiBN6vu3Upxy3BK8:58:55)
+    at Provider (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=61e85cd0:38:15)
+    at TooltipProvider (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=61e85cd0:64:5)
+    at QueryClientProvider (https://3b670f53-ac89-4cef-af4f-be71aa511b31-00-24tr16rhfn4ji.picard.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=61e85cd0:2805:3)
+    at App
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+logCapturedError @ chunk-RPCDYKBN.js?v=61e85cd0:14032
+update.callback @ chunk-RPCDYKBN.js?v=61e85cd0:14052
+callCallback @ chunk-RPCDYKBN.js?v=61e85cd0:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=61e85cd0:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=61e85cd0:17093
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=61e85cd0:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=61e85cd0:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=61e85cd0:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=61e85cd0:19353
+commitRoot @ chunk-RPCDYKBN.js?v=61e85cd0:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=61e85cd0:18760
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=61e85cd0:18718
+workLoop @ chunk-RPCDYKBN.js?v=61e85cd0:197
+flushWork @ chunk-RPCDYKBN.js?v=61e85cd0:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=61e85cd0:384Understand this error
+chunk-RPCDYKBN.js?v=61e85cd0:9934 Uncaught Error: Objects are not valid as a React child (found: object with keys {weeks, notes}). If you meant to render a collection of children, use an array instead.
+    at throwOnInvalidObjectType (chunk-RPCDYKBN.js?v=61e85cd0:9934:17)
+    at createChild (chunk-RPCDYKBN.js?v=61e85cd0:10110:15)
+    at reconcileChildrenArray (chunk-RPCDYKBN.js?v=61e85cd0:10282:33)
+    at reconcileChildFibers2 (chunk-RPCDYKBN.js?v=61e85cd0:10559:24)
+    at reconcileChildren (chunk-RPCDYKBN.js?v=61e85cd0:14290:37)
+    at updateHostComponent (chunk-RPCDYKBN.js?v=61e85cd0:14807:11)
+    at beginWork (chunk-RPCDYKBN.js?v=61e85cd0:15935:22)
+    at beginWork$1 (chunk-RPCDYKBN.js?v=61e85cd0:19753:22)
+    at performUnitOfWork (chunk-RPCDYKBN.js?v=61e85cd0:19198:20)
+    at workLoopSync (chunk-RPCDYKBN.js?v=61e85cd0:19137:13)

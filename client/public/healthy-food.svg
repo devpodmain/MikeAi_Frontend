@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 250" fill="none">
+  <defs>
+    <linearGradient id="plate-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#F9FAFB;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#E5E7EB;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="apple-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FCA5A5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#EF4444;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="salad-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#86EFAC;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#22C55E;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="300" height="250" fill="#F0FDF4" rx="15"/>
+  
+  <!-- Plate -->
+  <ellipse cx="150" cy="180" rx="80" ry="15" fill="url(#plate-gradient)" stroke="#D1D5DB" stroke-width="2"/>
+  
+  <!-- Apple -->
+  <g transform="translate(100, 80)">
+    <ellipse cx="0" cy="15" rx="18" ry="20" fill="url(#apple-gradient)"/>
+    <rect x="-2" y="-5" width="4" height="8" fill="#A3A3A3"/>
+    <ellipse cx="5" cy="-3" rx="6" ry="3" fill="#22C55E" transform="rotate(30)"/>
+  </g>
+  
+  <!-- Salad bowl -->
+  <g transform="translate(180, 90)">
+    <ellipse cx="0" cy="20" rx="25" ry="8" fill="#F3F4F6"/>
+    <ellipse cx="0" cy="15" rx="25" ry="8" fill="url(#salad-gradient)"/>
+    <!-- Salad details -->
+    <circle cx="-8" cy="12" r="3" fill="#FDE047"/>
+    <circle cx="6" cy="14" r="2" fill="#FB7185"/>
+    <circle cx="-3" cy="18" r="2" fill="#A78BFA"/>
+  </g>
+  
+  <!-- Carrot -->
+  <g transform="translate(80, 120)">
+    <ellipse cx="0" cy="10" rx="4" ry="15" fill="#FB923C"/>
+    <path d="M-2 -5 L-1 -8 L1 -8 L2 -5" fill="#22C55E"/>
+    <path d="M-3 -3 L-2 -7 L0 -7 L1 -3" fill="#22C55E"/>
+  </g>
+  
+  <!-- Broccoli -->
+  <g transform="translate(220, 110)">
+    <rect x="-2" y="15" width="4" height="12" fill="#65A30D"/>
+    <circle cx="-5" cy="8" r="4" fill="#22C55E"/>
+    <circle cx="0" cy="5" r="5" fill="#22C55E"/>
+    <circle cx="5" cy="8" r="4" fill="#22C55E"/>
+  </g>
+  
+  <!-- Water bottle -->
+  <g transform="translate(50, 140)">
+    <rect x="-6" y="0" width="12" height="35" rx="6" fill="#BFDBFE" opacity="0.7"/>
+    <rect x="-4" y="-5" width="8" height="8" rx="2" fill="#3B82F6"/>
+    <ellipse cx="0" cy="20" rx="4" ry="15" fill="#60A5FA" opacity="0.8"/>
+  </g>
+  
+  <!-- Avocado -->
+  <g transform="translate(260, 130)">
+    <ellipse cx="0" cy="8" rx="8" ry="12" fill="#22C55E"/>
+    <ellipse cx="0" cy="8" rx="5" ry="8" fill="#FDE047"/>
+    <circle cx="0" cy="6" r="2" fill="#A3A3A3"/>
+  </g>
+  
+  <!-- Decorative elements -->
+  <circle cx="40" cy="40" r="2" fill="#10B981" opacity="0.6"/>
+  <circle cx="260" cy="50" r="3" fill="#F59E0B" opacity="0.6"/>
+  <circle cx="30" cy="200" r="2" fill="#EF4444" opacity="0.6"/>
+  <circle cx="270" cy="220" r="2" fill="#8B5CF6" opacity="0.6"/>
+  
+  <!-- Sparkles -->
+  <g fill="#FBBF24" opacity="0.8">
+    <polygon points="120,30 122,35 127,35 123,38 125,43 120,40 115,43 117,38 113,35 118,35" transform="scale(0.6)"/>
+    <polygon points="200,45 202,50 207,50 203,53 205,58 200,55 195,58 197,53 193,50 198,50" transform="scale(0.5)"/>
+    <polygon points="240,190 242,195 247,195 243,198 245,203 240,200 235,203 237,198 233,195 238,195" transform="scale(0.4)"/>
+  </g>
+</svg>

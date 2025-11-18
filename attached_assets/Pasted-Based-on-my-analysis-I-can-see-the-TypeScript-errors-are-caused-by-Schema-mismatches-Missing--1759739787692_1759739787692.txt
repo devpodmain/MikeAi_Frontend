@@ -1,0 +1,59 @@
+Based on my analysis, I can see the TypeScript errors are caused by:
+
+Schema mismatches - Missing fields and enum values in the database schema
+Type inconsistencies - Incorrect type assignments in auth and routes
+Null handling issues - Date and optional field handling
+Here's my comprehensive plan to fix all 39 errors:
+
+Plan to Fix TypeScript Errors
+Phase 1: Update Database Schema (shared/schema.ts)
+Add missing enum values:
+
+Add "mock" to authProvider enum for testing
+Add "incomplete" to subscriptionStatus enum
+Add "professional" to organization subscriptionPlan enum
+Add missing fields to tables:
+
+Add description field to orgWorkoutPlans table
+Add assignedCoachId field to orgClients table
+Add coach fields to organizations table (coachId, coachName, coachEmail) if needed
+Fix type definitions:
+
+Ensure weight field in userProfiles accepts both string and number
+Update schema types to match usage
+Phase 2: Fix Authentication Type Errors (server/auth.ts)
+Fix userType parameter (line 44):
+
+Change from generic string to proper enum type from schema
+Fix passport callback types (line 99):
+
+Add explicit types to err, user, and info parameters
+Fix deserializeUser null handling (line 76):
+
+Pass false instead of null for authentication failure
+Phase 3: Fix Routes Type Errors (server/routes.ts)
+Fix implicit any types:
+
+Add explicit typing to allPlans variable
+Fix organization property access:
+
+Either update schema or fix code accessing non-existent coach properties
+Fix date handling:
+
+Add null checks before using dates with date-fns functions
+Fix meal type assignments:
+
+Ensure meal type values match the enum exactly
+Fix exercise mapping:
+
+Add proper index signature or type assertion
+Fix subscription/auth provider assignments:
+
+Use only valid enum values or update schema
+Phase 4: Database Migration
+Run npm run db:push --force to sync schema changes to database
+Phase 5: Verification
+Check LSP diagnostics to confirm all errors resolved
+Test the application to ensure it still works
+Verify no runtime errors
+Would you like me to proceed with implementing this plan? I'll fix all the errors systematically.

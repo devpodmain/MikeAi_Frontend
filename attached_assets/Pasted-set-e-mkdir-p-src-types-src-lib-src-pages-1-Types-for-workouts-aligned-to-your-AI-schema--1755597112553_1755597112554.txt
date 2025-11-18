@@ -1,0 +1,321 @@
+set -e
+mkdir -p src/types src/lib src/pages
+
+# 1) Types for workouts (aligned to your AI schema)
+cat > src/types/workoutPlan.ts <<'EOF'
+export type WorkoutItem = {
+  exercise: string;
+  equipment?: string;
+  sets: number;
+  reps: string;       // e.g., "6-8"
+  rir?: string;       // e.g., "1-2"
+  restSec?: number;
+  notes?: string;
+};
+
+export type WorkoutDay = {
+  dayIndex: number;
+  name: string;
+  items: WorkoutItem[];
+};
+
+export type WorkoutPlan = {
+  name: string;
+  goal: "hypertrophy" | "strength" | "fat_loss" | "general_fitness" | string;
+  weeks: number;
+  days_per_week: number;
+  split: string;      // "Full Body" | "Upper/Lower" | "PPL" | etc.
+  days: WorkoutDay[];
+  progression_notes?: string;
+  warmup_notes?: string;
+  deload?: string;
+};
+EOF
+
+# 2) Workout API client (mirrors your meal API style; calls local FastAPI directly)
+cat > src/lib/workoutPlanApi.ts <<'EOF'
+import type { WorkoutPlan } from "@/types/workoutPlan";
+import type { Profile as MealProfile } from "@/types/mealPlan"; // reuse your existing Profile type
+
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+
+export class WorkoutPlanApiError extends Error {
+  constructor(message: string, public status?: number) {
+    super(message);
+    this.name = "WorkoutPlanApiError";
+  }
+}
+
+async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(options.headers || {})
+    }
+  });
+
+  if (!response.ok) {
+    let msg = `HTTP ${response.status}: ${response.statusText}`;
+    try {
+      const err = await response.json();
+      msg = err.detail || err.message || msg;
+    } catch {}
+    throw new WorkoutPlanApiError(msg, response.status);
+  }
+  return response.json();
+}
+
+/**
+ * Map your meal Profile -> workout profile expected by FastAPI
+ * meal Profile likely has height (cm) and weight (kg) named differently.
+ */
+function mapProfileToWorkout(profile: MealProfile) {
+  const p: any = { ...profile };
+  // Normalize field names expected by the workout endpoint
+  if (p.height && !p.height_cm) p.height_cm = Number(p.height) || undefined;
+  if (p.weight && !p.weight_kg) p.weight_kg = Number(p.weight) || undefined;
+  // keep user_id, age, activity_level if present
+  return {
+    user_id: p.user_id,
+    sex: p.gender || p.sex,
+    age: p.age,
+    height_cm: p.height_cm,
+    weight_kg: p.weight_kg,
+    activity_level: p.activity_level,
+    training_age_months: p.training_age_months
+  };
+}
+
+export type WorkoutPrefs = {
+  goal: "hypertrophy" | "strength" | "fat_loss" | "general_fitness";
+  days_per_week: number;          // 2..7
+  session_minutes: number;        // 30..120
+  equipment: string[];            // ["barbell","dumbbell","machine","bodyweight","bands",...]
+  injuries?: string;
+  desired_split?: "auto" | "full-body" | "upper/lower" | "push/pull/legs";
+};
+
+/** Generate a workout plan via your local FastAPI */
+export async function generateWorkoutPlan(
+  mealProfile: MealProfile,
+  prefs: WorkoutPrefs,
+  weeks: number = 8
+): Promise<WorkoutPlan> {
+  const body = {
+    profile: mapProfileToWorkout(mealProfile),
+    prefs,
+    weeks
+  };
+
+  try {
+    const data = await fetchWithErrorHandling(`${API_BASE}/ai/workouts/generate`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+
+    // Your FastAPI returns: { success: true, data: <plan> }
+    if (!data?.success || !data?.data) {
+      throw new WorkoutPlanApiError("Failed to generate workout plan");
+    }
+    return data.data as WorkoutPlan;
+  } catch (e) {
+    if (e instanceof WorkoutPlanApiError) throw e;
+    throw new WorkoutPlanApiError("Network error while generating workout plan");
+  }
+}
+
+/** Optional local persistence (mirror your meal stubs) */
+export async function persistWorkoutPlan(userId: string, plan: WorkoutPlan): Promise<void> {
+  try {
+    localStorage.setItem(`workout-plan-${userId}`, JSON.stringify(plan));
+  } catch {
+    throw new WorkoutPlanApiError("Failed to persist workout plan");
+  }
+}
+
+export async function loadExistingWorkoutPlan(userId: string): Promise<WorkoutPlan | null> {
+  try {
+    const raw = localStorage.getItem(`workout-plan-${userId}`);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+EOF
+
+# 3) Update the Workouts page to use the new client (no Express; hits local FastAPI)
+cat > src/pages/Workouts.tsx <<'EOF'
+import React, { useEffect, useMemo, useState } from "react";
+import { generatePlan as generateMealPlan, getUserProfile } from "@/lib/mealPlanApi"; // if you have it
+import { generateWorkoutPlan, persistWorkoutPlan, loadExistingWorkoutPlan, type WorkoutPrefs } from "@/lib/workoutPlanApi";
+import type { WorkoutPlan } from "@/types/workoutPlan";
+import type { Profile } from "@/types/mealPlan";
+
+const EQUIP_HOME = ["bodyweight","dumbbell","bands","kettlebell"];
+const EQUIP_GYM  = ["barbell","dumbbell","machine","cable","kettlebell","bodyweight"];
+
+export default function WorkoutsPage() {
+  const [userId, setUserId] = useState<string>("demo_user_1");
+  const [profile, setProfile] = useState<Profile | null>(null);
+
+  // form state
+  const [goal, setGoal] = useState<WorkoutPrefs["goal"]>("hypertrophy");
+  const [split, setSplit] = useState<NonNullable<WorkoutPrefs["desired_split"]>>("auto");
+  const [daysPerWeek, setDaysPerWeek] = useState<number>(4);
+  const [sessionMinutes, setSessionMinutes] = useState<number>(60);
+  const [where, setWhere] = useState<"home"|"gym">("gym");
+  const [equipment, setEquipment] = useState<string[]>(EQUIP_GYM);
+  const [injuries, setInjuries] = useState<string>("");
+
+  const [plan, setPlan] = useState<WorkoutPlan | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string>("");
+
+  useEffect(() => {
+    // Try to load user/profile (reuse your existing profile endpoint if available)
+    (async () => {
+      try {
+        const me = await getUserProfile(userId); // your stub or real API
+        setProfile(me);
+        const stored = await loadExistingWorkoutPlan(userId);
+        if (stored) setPlan(stored);
+      } catch {
+        // fallback profile
+        setProfile({ user_id: userId } as Profile);
+      }
+    })();
+  }, [userId]);
+
+  useEffect(() => {
+    setEquipment(where === "home" ? EQUIP_HOME : EQUIP_GYM);
+  }, [where]);
+
+  const canSubmit = useMemo(() => !!profile && !loading, [profile, loading]);
+
+  async function onGenerate() {
+    if (!profile) return;
+    setLoading(true); setErr("");
+    try {
+      const prefs: WorkoutPrefs = {
+        goal,
+        days_per_week: daysPerWeek,
+        session_minutes: sessionMinutes,
+        equipment,
+        injuries,
+        desired_split: split
+      };
+      const newPlan = await generateWorkoutPlan(profile, prefs, 8);
+      setPlan(newPlan);
+      await persistWorkoutPlan(userId, newPlan);
+    } catch (e: any) {
+      setErr(e?.message || "Failed to generate plan");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 space-y-6">
+      <h1 className="text-2xl font-semibold">Workout Plans (AI)</h1>
+
+      <div className="border rounded-xl p-4 space-y-4">
+        <h2 className="text-lg font-medium">Create a plan</h2>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm mb-1">Goal</label>
+            <select className="w-full border rounded px-3 py-2" value={goal} onChange={e=>setGoal(e.target.value as any)}>
+              {["hypertrophy","strength","fat_loss","general_fitness"].map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Split</label>
+            <select className="w-full border rounded px-3 py-2" value={split} onChange={e=>setSplit(e.target.value as any)}>
+              {["auto","full-body","upper/lower","push/pull/legs"].map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Days per week</label>
+            <input type="number" min={2} max={7} className="w-full border rounded px-3 py-2" value={daysPerWeek} onChange={e=>setDaysPerWeek(+e.target.value)} />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Session minutes</label>
+            <input type="number" min={30} max={120} className="w-full border rounded px-3 py-2" value={sessionMinutes} onChange={e=>setSessionMinutes(+e.target.value)} />
+          </div>
+
+          <div>
+            <label className="block text-sm mb-1">Where do you train?</label>
+            <div className="flex gap-4">
+              {(["home","gym"] as const).map(loc => (
+                <label key={loc} className="flex items-center gap-2">
+                  <input type="radio" name="loc" checked={where===loc} onChange={()=>setWhere(loc)} />
+                  <span className="capitalize">{loc}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm mb-1">Equipment (auto from location, editable)</label>
+            <div className="flex flex-wrap gap-2">
+              {["barbell","dumbbell","machine","cable","kettlebell","bodyweight","bands"].map(e => {
+                const on = equipment.includes(e);
+                return (
+                  <label key={e} className="inline-flex items-center gap-2 border rounded-full px-3 py-1 text-sm">
+                    <input type="checkbox" checked={on} onChange={() => {
+                      setEquipment(prev => on ? prev.filter(x=>x!==e) : [...prev, e]);
+                    }} />
+                    <span className="capitalize">{e}</span>
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="md:col-span-2">
+            <label className="block text-sm mb-1">Injuries / constraints (optional)</label>
+            <textarea className="w-full border rounded px-3 py-2" rows={2} value={injuries} onChange={e=>setInjuries(e.target.value)} />
+          </div>
+        </div>
+
+        {err && <div className="text-red-600 text-sm">{err}</div>}
+
+        <button onClick={onGenerate} disabled={!canSubmit} className="px-4 py-2 rounded bg-black text-white disabled:opacity-50">
+          {loading ? "Generating…" : "Generate Plan"}
+        </button>
+      </div>
+
+      {plan && (
+        <div className="border rounded-xl p-4">
+          <h2 className="text-lg font-medium mb-3">{plan.name} • {plan.goal} • {plan.weeks} weeks</h2>
+          {plan.days.sort((a,b)=>a.dayIndex-b.dayIndex).map(d => (
+            <div key={d.dayIndex} className="mb-3">
+              <div className="font-medium text-sm mb-1">Day {d.dayIndex+1} — {d.name}</div>
+              <ol className="pl-4 list-decimal space-y-1">
+                {d.items.map((it, idx) => (
+                  <li key={idx} className="text-sm">
+                    <span className="font-medium">{it.exercise}</span>
+                    {` — ${it.sets} x ${it.reps}`}
+                    {it.restSec ? ` • rest ${it.restSec}s` : ""}
+                    {it.notes ? ` • ${it.notes}` : ""}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ))}
+          {plan.progression_notes && <div className="text-xs text-gray-600 mt-2">Progression: {plan.progression_notes}</div>}
+          {plan.warmup_notes && <div className="text-xs text-gray-600">Warm-up: {plan.warmup_notes}</div>}
+          {plan.deload && <div className="text-xs text-gray-600">Deload: {plan.deload}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+EOF
+
+echo "✅ Added workout types, API client, and updated Workouts page."
+echo "➡ Ensure VITE_API_BASE_URL is set to your local FastAPI (e.g., http://localhost:8000)."

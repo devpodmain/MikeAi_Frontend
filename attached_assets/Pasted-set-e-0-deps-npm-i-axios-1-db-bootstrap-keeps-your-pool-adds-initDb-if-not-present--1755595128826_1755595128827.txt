@@ -1,0 +1,226 @@
+set -e
+
+# 0) deps
+npm i axios
+
+# 1) db bootstrap (keeps your pool; adds initDb if not present)
+mkdir -p src/routes
+cat > src/db.js <<'EOF'
+import pkg from 'pg';
+const { Pool } = pkg;
+
+export const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
+
+export async function initDb() {
+  const sql = `
+  CREATE TABLE IF NOT EXISTS exercises (
+    id SERIAL PRIMARY KEY,
+    slug TEXT UNIQUE NOT NULL,
+    name TEXT NOT NULL,
+    category TEXT,
+    image_url TEXT,
+    gif_url TEXT,
+    instructions TEXT
+  );
+
+  CREATE TABLE IF NOT EXISTS workouts (
+    id SERIAL PRIMARY KEY,
+    owner_id TEXT NOT NULL,
+    name TEXT NOT NULL,
+    goal TEXT,
+    weeks INT DEFAULT 8,
+    created_at TIMESTAMPTZ DEFAULT now()
+  );
+
+  CREATE TABLE IF NOT EXISTS workout_items (
+    id SERIAL PRIMARY KEY,
+    workout_id INT REFERENCES workouts(id) ON DELETE CASCADE,
+    day_index INT NOT NULL,
+    order_index INT NOT NULL,
+    exercise_id INT REFERENCES exercises(id),
+    sets INT,
+    reps TEXT,
+    rest_sec INT,
+    notes TEXT
+  );
+  `;
+  await pool.query(sql);
+}
+EOF
+
+# 2) AI route: POST /workouts/ai -> call local FastAPI via FASTAPI_URL, save to DB
+cat > src/routes/aiWorkouts.js <<'EOF'
+import { Router } from "express";
+import axios from "axios";
+import { pool } from "../db.js";
+
+const r = Router();
+const slugify = s => s.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'');
+
+async function ensureExerciseByName(name) {
+  const slug = slugify(name);
+  const found = await pool.query(`SELECT id FROM exercises WHERE slug=$1`, [slug]);
+  if (found.rows[0]) return found.rows[0].id;
+
+  const ins = await pool.query(
+    `INSERT INTO exercises (slug, name) VALUES ($1,$2)
+     ON CONFLICT (slug) DO NOTHING RETURNING id`,
+    [slug, name]
+  );
+  if (ins.rows[0]) return ins.rows[0].id;
+  const again = await pool.query(`SELECT id FROM exercises WHERE slug=$1`, [slug]);
+  return again.rows[0].id;
+}
+
+r.post("/workouts/ai", async (req, res) => {
+  try {
+    const { ownerId, profile, prefs, weeks = 8 } = req.body || {};
+    if (!ownerId || !prefs?.days_per_week || !prefs?.goal) {
+      return res.status(400).json({ success:false, error:"ownerId, prefs.days_per_week, prefs.goal required" });
+    }
+    const FASTAPI_URL = process.env.FASTAPI_URL;
+    if (!FASTAPI_URL) return res.status(500).json({ success:false, error:"FASTAPI_URL not set in secrets" });
+
+    // call your local FastAPI (exposed via tunnel) — returns strict JSON plan
+    const { data } = await axios.post(`${FASTAPI_URL}/ai/workouts/generate`, {
+      profile: { user_id: ownerId, ...(profile || {}) },
+      prefs,
+      weeks
+    }, { timeout: 60000 });
+
+    if (!data?.success || !data?.data) return res.status(502).json({ success:false, error:"AI generation failed" });
+    const plan = data.data;
+
+    // save header
+    const w = await pool.query(
+      `INSERT INTO workouts (owner_id, name, goal, weeks)
+       VALUES ($1,$2,$3,$4) RETURNING id`,
+      [ownerId, plan.name || `${prefs.goal} plan`, plan.goal || prefs.goal, plan.weeks || weeks]
+    );
+    const workoutId = w.rows[0].id;
+
+    // save items
+    for (const day of plan.days || []) {
+      const items = Array.isArray(day.items) ? day.items : [];
+      for (let i = 0; i < items.length; i++) {
+        const it = items[i];
+        const exName = (it.exercise || "").trim();
+        if (!exName) continue;
+        const exId = await ensureExerciseByName(exName);
+        await pool.query(
+          `INSERT INTO workout_items (workout_id, day_index, order_index, exercise_id, sets, reps, rest_sec, notes)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+          [workoutId, Number(day.dayIndex) || 0, i, exId, it.sets ?? null, it.reps ?? null, it.restSec ?? null, it.notes ?? null]
+        );
+      }
+    }
+
+    res.json({ success:true, data:{ workoutId, plan_meta:{ name: plan.name, goal: plan.goal, weeks: plan.weeks, split: plan.split } }});
+  } catch (e) {
+    res.status(500).json({ success:false, error: e?.response?.data?.detail || e.message });
+  }
+});
+
+export default r;
+EOF
+
+# 3) Workouts list + items + full (join)
+cat > src/routes/workouts.js <<'EOF'
+import { Router } from "express";
+import { pool } from "../db.js";
+
+const r = Router();
+
+r.get("/", async (req, res) => {
+  const { ownerId } = req.query;
+  if (!ownerId) return res.status(400).json({ success:false, error:"ownerId required" });
+  const { rows } = await pool.query(
+    `SELECT id, owner_id, name, goal, weeks, created_at
+     FROM workouts WHERE owner_id=$1 ORDER BY created_at DESC`,
+    [ownerId]
+  );
+  res.json({ success:true, data: rows });
+});
+
+r.get("/:id/items", async (req, res) => {
+  const id = Number(req.params.id);
+  const { rows } = await pool.query(
+    `SELECT id, workout_id, day_index, order_index, exercise_id, sets, reps, rest_sec, notes
+     FROM workout_items WHERE workout_id=$1
+     ORDER BY day_index, order_index`,
+    [id]
+  );
+  res.json({ success:true, data: rows });
+});
+
+r.get("/:id/full", async (req, res) => {
+  const id = Number(req.params.id);
+  const w = await pool.query(`SELECT id, owner_id, name, goal, weeks, created_at FROM workouts WHERE id=$1`, [id]);
+  if (!w.rows[0]) return res.status(404).json({ success:false, error:"not found" });
+  const q = await pool.query(
+    `SELECT wi.id, wi.day_index, wi.order_index, wi.sets, wi.reps, wi.rest_sec, wi.notes,
+            e.id as exercise_id, e.name as exercise_name, e.image_url, e.gif_url
+     FROM workout_items wi
+     LEFT JOIN exercises e ON e.id = wi.exercise_id
+     WHERE wi.workout_id=$1
+     ORDER BY wi.day_index, wi.order_index`,
+    [id]
+  );
+  const daysMap = new Map();
+  for (const row of q.rows) {
+    const d = row.day_index;
+    if (!daysMap.has(d)) daysMap.set(d, []);
+    daysMap.get(d).push({
+      id: row.id, orderIndex: row.order_index,
+      exerciseId: row.exercise_id, exerciseName: row.exercise_name,
+      imageUrl: row.image_url, gifUrl: row.gif_url,
+      sets: row.sets, reps: row.reps, restSec: row.rest_sec, notes: row.notes
+    });
+  }
+  const days = Array.from(daysMap.entries()).sort((a,b)=>a[0]-b[0])
+    .map(([dayIndex, items]) => ({ dayIndex, items }));
+  res.json({ success:true, data:{ workout: w.rows[0], days }});
+});
+
+export default r;
+EOF
+
+# 4) Patch exercises list to allow id lookup (optional, if you have this route already)
+if [ -f src/routes/exercises.js ]; then
+  awk '1' src/routes/exercises.js > /dev/null 2>&1 || true
+  # (leave as-is; this step is a noop unless you need id filtering)
+fi
+
+# 5) Wire routes in server
+# Tries to patch server.js by appending app.use if not present
+if ! grep -q "aiWorkouts" src/server.js 2>/dev/null; then
+  # attempt to insert imports and use statements
+  tmpfile=$(mktemp)
+  cat > "$tmpfile" <<'PATCH'
+import express from "express";
+import cors from "cors";
+import { initDb } from "./db.js";
+import aiWorkouts from "./routes/aiWorkouts.js";
+import workouts from "./routes/workouts.js";
+
+const app = express();
+app.use(cors());
+app.use(express.json({ limit: "2mb" }));
+
+app.use(aiWorkouts);
+app.use("/workouts", workouts);
+
+const PORT = process.env.PORT || 3000;
+initDb().then(() => app.listen(PORT, () => console.log(`API on :${PORT}`)));
+PATCH
+  cp "$tmpfile" src/server.js
+  rm "$tmpfile"
+fi
+
+echo "✅ Express/API updated."
+echo "👉 In this repl, set Secret FASTAPI_URL = https://<your-public-tunnel-to-local-fastapi>"
+echo "   Example: if ngrok exposes http://127.0.0.1:8000 as https://abcd.ngrok.io, set FASTAPI_URL=https://abcd.ngrok.io"
+echo "   Then restart the repl."
