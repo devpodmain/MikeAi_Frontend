@@ -59,7 +59,6 @@ interface ProtectedRouteProps {
 }
 
 
-
 function ProtectedRoute({ component: Component, allowedUserTypes, requiresOrgMembership }: ProtectedRouteProps) {
   const { user } = useAuth();
   const [, setLocation] = useLocation();  
