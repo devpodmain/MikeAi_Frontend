@@ -113,7 +113,6 @@ function Router() {
     (user as any)?.userType === 'org_owner' ? 'OrgOwnerDashboard' : 
     (user as any)?.userType === 'coach' ? 'CoachOrgDashboard'
       : 'UserHome');
-
   return (
     <>
       <Switch>

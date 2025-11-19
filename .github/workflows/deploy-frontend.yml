@@ -117,9 +117,9 @@ jobs:
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
+          printf "%s\n" "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
-          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts        
 
       - name: Copy built frontend to VM
         run: |
