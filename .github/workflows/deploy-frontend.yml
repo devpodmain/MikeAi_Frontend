@@ -120,7 +120,11 @@ jobs:
           printf "%s\n" "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
           ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts        
-
+      - name: Test SSH connection
+        run: |
+          ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no \
+          info@${{ env.VM_IP }} echo "SSH OK"
+        
       - name: Copy built frontend to VM
         run: |
           echo "📦 Copying built artifacts to VM..."
