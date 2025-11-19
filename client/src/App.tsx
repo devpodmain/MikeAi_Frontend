@@ -60,8 +60,7 @@ interface ProtectedRouteProps {
 
 function ProtectedRoute({ component: Component, allowedUserTypes, requiresOrgMembership }: ProtectedRouteProps) {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  
+  const [, setLocation] = useLocation();  
   const userType = (user as any)?.userType || 'individual';
   const currentOrgId = (user as any)?.currentOrgId;
   
