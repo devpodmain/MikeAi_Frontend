@@ -18,16 +18,7 @@ on:
       - 'tailwind.config.ts'
       - 'postcss.config.js'
       - 'drizzle.config.ts'
-    paths-ignore:
-      - '.github/**'
-      - '**.md'
-      - '*.png'
-      - '*.jpg'
-      - 'dist/**'
-      - 'node_modules/**'
-      - 'attached_assets/**'
-      - 'migrations/**'
-      - 'cookies*.txt'
+
   workflow_dispatch:
     inputs:
       force_deploy:
