@@ -1,6 +1,51 @@
-node_modules
-dist
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+.server/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+*.env
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
 .DS_Store
-server/public
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Vite
 vite.config.ts.*
+.vite/
+
+# Test/debug files
+cookies*.txt
+test_*.txt
+
+# Archives
 *.tar.gz
+*.zip
+
+# Cache
+.eslintcache
+.npm
+.cache/
+
+# Server public (if generated)
+server/public/
