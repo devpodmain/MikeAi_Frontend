@@ -1,90 +1,118 @@
-// Read .env into process.env when present (development)
-import 'dotenv/config';
-import express, { type Request, Response, NextFunction } from "express";
+import "dotenv/config";
+import express, { Request, Response, NextFunction } from "express";
+import path from "path";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import { log, setupVite, serveStatic } from "./vite";
 
 const app = express();
+const __dirname = path.resolve();
 
-// IMPORTANT: Webhook route must use raw body for signature verification
-// Apply express.raw() to webhook endpoint BEFORE express.json()
-app.use('/api/stripe/webhook', express.raw({ type: 'application/json' }));
+/* ---------------------------
+   1. Frontend Serving (Prod)
+--------------------------- */
+if (process.env.NODE_ENV === "production") {
+  // Serve Vite built frontend
+  app.use(express.static(path.join(__dirname, "dist/public/")));
 
-// Apply JSON parsing to all other routes
+  // SPA fallback
+  app.get("/", (req, res) => {
+    res.sendFile(path.join(__dirname, "dist/public/", "index.html"));
+  });
+
+  app.get(/^\/(?!api).*/, (req, res) => {
+    res.sendFile(path.join(__dirname, "dist/public/", "index.html"));
+  });
+}
+
+/* --------------------------------------
+   2. Stripe Webhook – RAW body required
+--------------------------------------- */
+app.use(
+  "/api/stripe/webhook",
+  express.raw({ type: "application/json" })
+);
+
+/* --------------------------
+   3. JSON + URL middleware
+--------------------------- */
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+/* --------------------------
+   4. API request logger
+--------------------------- */
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
+  let responseCopy: any = null;
 
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
+  const originalJson = res.json.bind(res);
+  res.json = (json) => {
+    responseCopy = json;
+    return originalJson(json);
   };
 
   res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
+    if (req.path.startsWith("/api")) {
+      const duration = Date.now() - start;
+      let line = `${req.method} ${req.path} ${res.statusCode} in ${duration}ms`;
+
+      if (responseCopy) {
+        const out = JSON.stringify(responseCopy);
+        line += out.length > 100 ? ` :: ${out.slice(0, 100)}…` : ` :: ${out}`;
       }
 
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+      log(line);
     }
   });
 
   next();
 });
 
+/* --------------------------
+   5. Routes + startup tasks
+--------------------------- */
 (async () => {
   const server = await registerRoutes(app);
 
-  // Run activation maintenance on startup to ensure all orgs comply with quotas
+  // Activation maintenance job
   (async () => {
     try {
-      const { storage } = await import('./storage');
+      const { storage } = await import("./storage");
       await storage.runActivationMaintenanceForAllOrgs();
-    } catch (error) {
-      console.error('[Startup] Activation maintenance failed:', error);
+    } catch (err) {
+      console.error("[Startup] Activation maintenance failed:", err);
     }
   })();
 
+  /* --------------------------
+      6. Error handling
+  --------------------------- */
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
+    const code = err.status || err.statusCode || 500;
+    res.status(code).json({ message: err.message || "Internal Server Error" });
+    console.error(err);
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
+  /* --------------------------
+      7. Development (Vite)
+  --------------------------- */
+  if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
+  /* --------------------------
+      8. Start Server
+  --------------------------- */
   const port = 5000;
   const listenOptions: any = { port, host: "0.0.0.0" };
-  // `reusePort` is unsupported on some platforms (notably Windows), so only set it when available
-  if (process.platform !== 'win32') {
+
+  if (process.platform !== "win32") {
     listenOptions.reusePort = true;
   }
 
   server.listen(listenOptions, () => {
-    log(`serving on port ${port}`);
+    log(`🚀 Server running at http://localhost:${port}`);
   });
 })();
