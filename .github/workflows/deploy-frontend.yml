@@ -36,9 +36,8 @@ env:
 jobs:
   deploy-frontend:
     runs-on: ubuntu-latest
-    # Only deploy if frontend code changed (push) OR force_deploy is true (manual trigger)
     if: github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.event.inputs.force_deploy == 'true')
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -51,7 +50,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - name: Install frontend dependencies
-        run: npm install        
+        run: npm install
 
       - name: Build frontend
         run: |
@@ -59,7 +58,6 @@ jobs:
           npm run build
           echo "✅ Build completed"
           
-          # Verify build output
           if [ ! -d "dist" ]; then
             echo "❌ Build failed: dist directory not found"
             exit 1
@@ -73,23 +71,18 @@ jobs:
           echo "✅ Build artifacts verified"
           ls -lah dist/
 
-      # 1. Authenticate
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
 
-      # 2. Install gcloud SDK
       - name: Setup Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 3. Verify auth (debug)
       - name: Verify gcloud auth
         run: gcloud auth list
-
-        
 
       - name: Get VM IP address
         id: get-vm-ip
@@ -99,19 +92,12 @@ jobs:
             --zone=${{ secrets.GCP_VM_ZONE }} \
             --project=${{ secrets.GCP_PROJECT_ID }} \
             --format='get(networkInterfaces[0].accessConfigs[0].natIP)')
-          
+
           if [ -z "$VM_IP" ]; then
             echo "❌ Failed to get VM IP address"
-            echo "Checking VM status..."
-            gcloud compute instances describe ${{ secrets.GCP_VM_NAME }} \
-              --zone=${{ secrets.GCP_VM_ZONE }} \
-              --project=${{ secrets.GCP_PROJECT_ID }} \
-              --format='get(status)'
             exit 1
           fi
-          
-          echo "✅ VM IP: $VM_IP"
-          echo "vm_ip=$VM_IP" >> $GITHUB_OUTPUT
+
           echo "VM_IP=$VM_IP" >> $GITHUB_ENV
 
       - name: Configure SSH
@@ -119,38 +105,47 @@ jobs:
           mkdir -p ~/.ssh
           printf "%s\n" "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/gcp_key
           chmod 600 ~/.ssh/gcp_key
-          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts        
+          ssh-keyscan -H ${{ env.VM_IP }} >> ~/.ssh/known_hosts
+
       - name: Test SSH connection
         run: |
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no \
-          info@${{ env.VM_IP }} echo "SSH OK"
-        
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }} echo "SSH OK"
+
+      - name: Prepare directories on VM
+        run: |
+          ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no \
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }} \
+            'mkdir -p ~/mikeai/frontend/dist ~/mikeai/shared'
+
       - name: Copy built frontend to VM
         run: |
           echo "📦 Copying built artifacts to VM..."
           
-          # Copy dist folder (built artifacts)
           rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
-            ${{ github.workspace }}/dist/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/dist/
+            ${{ github.workspace }}/dist/ \
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/dist/
           
-          # Copy package.json and package-lock.json (needed for runtime)
           rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
-            ${{ github.workspace }}/package.json ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/
+            ${{ github.workspace }}/package.json \
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/
+
           rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
-            ${{ github.workspace }}/package-lock.json ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/ 2>/dev/null || true
+            ${{ github.workspace }}/package-lock.json \
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/ 2>/dev/null || true
           
-          # Copy shared directory (needed for runtime)
           if [ -d "${{ github.workspace }}/shared" ]; then
             rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
-              ${{ github.workspace }}/shared/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/shared/
+              ${{ github.workspace }}/shared/ \
+              ${{ env.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/shared/
           fi
-          
+
           echo "✅ Files copied to VM"
 
       - name: Deploy frontend
         run: |
           ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no \
-            ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }} \
+            ${{ env.GCP_VM_USER }}@${{ env.VM_IP }} \
             'cd ~/mikeai && bash scripts/deploy-frontend.sh'
 
       - name: Frontend health check
@@ -166,4 +161,3 @@ jobs:
           echo "- **VM IP**: ${{ env.VM_IP }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Frontend URL**: http://${{ env.VM_IP }}:5000" >> $GITHUB_STEP_SUMMARY
           echo "- **Public URL**: http://${{ env.VM_IP }}" >> $GITHUB_STEP_SUMMARY
-
