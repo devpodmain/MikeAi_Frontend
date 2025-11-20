@@ -67,6 +67,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-11-20.acacia" as any,
 });
 
+
+
 // Utility function to format time ago
 function getTimeAgo(date: Date | string): string {
   const now = new Date();
