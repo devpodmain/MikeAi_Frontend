@@ -144,6 +144,12 @@ jobs:
             rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
               ${{ github.workspace }}/shared/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/shared/
           fi
+
+          # Copy shared directory (needed for runtime)
+          if [ -d "${{ github.workspace }}/client" ]; then
+            rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
+              ${{ github.workspace }}/client/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/client/
+          fi
           
           echo "✅ Files copied to VM"      
 
