@@ -7,23 +7,6 @@ import { log, setupVite, serveStatic } from "./vite";
 const app = express();
 const __dirname = path.resolve();
 
-/* ---------------------------
-   1. Frontend Serving (Prod)
---------------------------- */
-if (process.env.NODE_ENV === "production") {
-  // Serve Vite built frontend
-  app.use(express.static(path.join(__dirname, "dist/public/")));
-
-  // SPA fallback
-  app.get("/", (req, res) => {
-    res.sendFile(path.join(__dirname, "dist/public/", "index.html"));
-  });
-
-  app.get(/^\/(?!api).*/, (req, res) => {
-    res.sendFile(path.join(__dirname, "dist/public/", "index.html"));
-  });
-}
-
 /* --------------------------------------
    2. Stripe Webhook – RAW body required
 --------------------------------------- */

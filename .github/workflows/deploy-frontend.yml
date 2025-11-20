@@ -146,9 +146,9 @@ jobs:
           fi
 
           # Copy shared directory (needed for runtime)
-          if [ -d "${{ github.workspace }}/client" ]; then
+          if [ -d "${{ github.workspace }}/frontend/client" ]; then
             rsync -avz -e "ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no" \
-              ${{ github.workspace }}/client/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/client/
+              ${{ github.workspace }}/frontend/client/ ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }}:~/mikeai/frontend/client/
           fi
           
           echo "✅ Files copied to VM"      
