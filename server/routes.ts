@@ -67,8 +67,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
   apiVersion: "2024-11-20.acacia" as any,
 });
 
-
-
 // Utility function to format time ago
 function getTimeAgo(date: Date | string): string {
   const now = new Date();
@@ -637,6 +635,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, plan: newPlan });
     } catch (error) {
       res.status(500).json({ message: "Failed to save workout plan" });
+    }
+  });
+
+  app.post('/api/workout-plans/preview', requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Invalid user session" });
+      }
+
+      const { profile, prefs, weeks = 8 } = req.body;
+      
+      if (!profile || !prefs) {
+        return res.status(400).json({ message: "Missing required fields: profile, prefs" });
+      }
+
+      const AI_API_BASE = process.env.VITE_API_BASE_URL || "https://mikeai.co/fastapi";
+      
+      const requestBody = {
+        profile,
+        prefs,
+        weeks
+      };
+
+      const aiResponse = await fetch(`${AI_API_BASE}/ai/workouts/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('AI service error:', errorText);
+        return res.status(aiResponse.status).json({ 
+          message: "Failed to generate workout plan preview",
+          error: errorText 
+        });
+      }
+
+      const aiData = await aiResponse.json();
+      
+      if (!aiData.success || !aiData.data) {
+        return res.status(500).json({ message: "AI service returned invalid response" });
+      }
+
+      res.json({
+        success: true,
+        data: aiData.data,
+        preview: true
+      });
+    } catch (error: any) {
+      console.error('Workout plan preview error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate workout plan preview",
+        error: error.message 
+      });
     }
   });
 
@@ -1723,6 +1779,21 @@ Always prioritize health, safety, and sustainable practices.`;
           userEmail: user.email || '',
           userName: `${user.firstName} ${user.lastName}`.trim()
         },
+        payment_method_options: {
+          card: {
+            request_three_d_secure: 'any'
+          }
+        },
+        invoice_creation: {
+          enabled: true,
+          invoice_data: {
+            description: 'MikeAI Plus - 30 Day Access',
+            metadata: {
+              userId,
+              planName: 'PLUS - 30 Day Access'
+            }
+          }
+        },
         payment_intent_data: {
           metadata: {
             userId,
@@ -1961,6 +2032,22 @@ Always prioritize health, safety, and sustainable practices.`;
           userEmail: user.email || ''
         },
         customer_email: user.email || undefined,
+        payment_method_options: {
+          card: {
+            request_three_d_secure: 'any'
+          }
+        },
+        invoice_creation: {
+          enabled: true,
+          invoice_data: {
+            description: `MikeAI Organization ${tier.toUpperCase()} Tier - 30 Day Access`,
+            metadata: {
+              organizationId: org.id.toString(),
+              tier,
+              organizationName: org.name || ''
+            }
+          }
+        },
         payment_intent_data: {
           metadata: {
             organizationId: org.id.toString(),
@@ -2238,6 +2325,22 @@ Always prioritize health, safety, and sustainable practices.`;
           billingPeriodId: activePeriod.id.toString(),
           extraCoaches: extraCoaches || 0,
           extraClients: extraClients || 0
+        },
+        payment_method_options: {
+          card: {
+            request_three_d_secure: 'any'
+          }
+        },
+        invoice_creation: {
+          enabled: true,
+          invoice_data: {
+            description: 'MikeAI Organization Add-on Slots',
+            metadata: {
+              organizationId: orgId.toString(),
+              extraCoaches: extraCoaches || 0,
+              extraClients: extraClients || 0
+            }
+          }
         }
       });
 
@@ -2999,6 +3102,66 @@ Always prioritize health, safety, and sustainable practices.`;
       res.json(newMealPlan);
     } catch (error) {
       res.status(500).json({ message: "Failed to create meal plan" });
+    }
+  });
+
+  app.post('/api/meal-plans/preview', requireAuth, async (req: any, res) => {
+    try {
+      const userId = getUserId(req);
+      if (!userId) {
+        return res.status(401).json({ message: "Invalid user session" });
+      }
+
+      const { profile, days = 7, mealsPerDay = 5 } = req.body;
+      
+      if (!profile) {
+        return res.status(400).json({ message: "Missing required field: profile" });
+      }
+
+      const AI_API_BASE = process.env.VITE_API_BASE_URL || "https://mikeai.co/fastapi";
+      
+      const requestBody = {
+        profile,
+        days,
+        mealsPerDay,
+        provider: "openai",
+        model: "gpt-4.1-mini",
+      };
+
+      const aiResponse = await fetch(`${AI_API_BASE}/ai/meal-plans/generate`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error('AI service error:', errorText);
+        return res.status(aiResponse.status).json({ 
+          message: "Failed to generate meal plan preview",
+          error: errorText 
+        });
+      }
+
+      const aiData = await aiResponse.json();
+      
+      if (!aiData.success || !aiData.plan) {
+        return res.status(500).json({ message: "AI service returned invalid response" });
+      }
+
+      res.json({
+        success: true,
+        plan: aiData.plan,
+        preview: true
+      });
+    } catch (error: any) {
+      console.error('Meal plan preview error:', error);
+      res.status(500).json({ 
+        message: "Failed to generate meal plan preview",
+        error: error.message 
+      });
     }
   });
 
@@ -4909,6 +5072,21 @@ Always prioritize health, safety, and sustainable practices.`;
         console.error('Error in getPlanCompletionRates:', e);
       }
 
+      // Get new analytics data
+      let activityTrend = [];
+      try {
+        activityTrend = await storage.getActivityTrend(orgId);
+      } catch (e) {
+        console.error('Error in getActivityTrend:', e);
+      }
+
+      let teamCapacity = { coachesUsed: 0, coachesAllowed: 0, clientsUsed: 0, clientsAllowed: 0 };
+      try {
+        teamCapacity = await storage.getTeamCapacity(orgId);
+      } catch (e) {
+        console.error('Error in getTeamCapacity:', e);
+      }
+
       // Use real metrics from tracking data
       const completionRate = progressMetrics.completionRate;
       const workoutCompletion = completionRates.workoutCompletion;
@@ -4943,12 +5121,50 @@ Always prioritize health, safety, and sustainable practices.`;
           },
           recentActivity,
           mostActiveClients: mostActiveClients,
-          coachPerformance: coachPerformance
+          coachPerformance: coachPerformance,
+          activityTrend,
+          teamCapacity
         }
       });
     } catch (error) {
       console.error('Analytics error:', error);
       res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
+  // 2c. GET /api/organizations/:id/low-activity-clients - Get clients needing attention
+  app.get('/api/organizations/:id/low-activity-clients', requireOrgActiveSubscription, requireOrgMembership, async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const coachId = req.query.coachId as string | undefined;
+      
+      const lowActivityClients = await storage.getLowActivityClients(orgId, coachId);
+      
+      res.json({
+        success: true,
+        clients: lowActivityClients
+      });
+    } catch (error) {
+      console.error('Low activity clients error:', error);
+      res.status(500).json({ message: "Failed to fetch low activity clients" });
+    }
+  });
+
+  // 2d. GET /api/organizations/:id/habit-water-compliance - Get habit and water compliance
+  app.get('/api/organizations/:id/habit-water-compliance', requireOrgActiveSubscription, requireOrgMembership, async (req: any, res) => {
+    try {
+      const orgId = parseInt(req.params.id);
+      const coachId = req.query.coachId as string | undefined;
+      
+      const compliance = await storage.getHabitWaterCompliance(orgId, coachId);
+      
+      res.json({
+        success: true,
+        compliance
+      });
+    } catch (error) {
+      console.error('Habit water compliance error:', error);
+      res.status(500).json({ message: "Failed to fetch habit and water compliance" });
     }
   });
 

@@ -25,6 +25,7 @@ import { loadExistingWorkoutPlan } from "@/lib/workoutPlanApi";
 import { useToast } from "@/hooks/use-toast";
 import logoImage from "@assets/1_1753425387748.png";
 import heroImage from "@assets/img 1_1753421307951.jpg";
+import { ProfileCompletionAlert } from "@/components/ProfileCompletionAlert";
 
 // Motivational quotes array
 const MOTIVATIONAL_QUOTES = [
@@ -338,6 +339,8 @@ export default function UserHome() {
       <Navigation />
       
       <div className="container mx-auto px-4 py-8">
+        <ProfileCompletionAlert />
+        
         {/* User Welcome Header */}
         <div className="relative rounded-3xl overflow-hidden mb-8" style={{
           backgroundImage: `url(${heroImage})`,

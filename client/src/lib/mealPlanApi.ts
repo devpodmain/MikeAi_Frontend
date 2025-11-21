@@ -81,6 +81,60 @@ export async function generatePlan(
   }
 }
 
+export async function generatePlanPreview(
+  profile: Profile,
+  days: number = 7,
+  mealsPerDay: number = 5,
+): Promise<Plan> {
+  const requestBody = {
+    profile,
+    days,
+    mealsPerDay,
+  };
+
+  console.log("=== CALLING MEAL PLAN PREVIEW API ===");
+  console.log("Request Body:", JSON.stringify(requestBody, null, 2));
+
+  try {
+    const response = await fetch("/api/meal-plans/preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(requestBody),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        // Use default error message if JSON parsing fails
+      }
+      throw new MealPlanApiError(errorMessage, response.status);
+    }
+
+    const data = await response.json();
+
+    console.log("=== MEAL PLAN PREVIEW API RESPONSE ===");
+    console.log("Response:", data);
+
+    if (!data.success || !data.plan) {
+      throw new MealPlanApiError("Failed to generate meal plan preview");
+    }
+
+    return data.plan;
+  } catch (error) {
+    console.error("=== MEAL PLAN PREVIEW API ERROR ===", error);
+    if (error instanceof MealPlanApiError) {
+      throw error;
+    }
+    throw new MealPlanApiError("Network error while generating meal plan preview");
+  }
+}
+
 export async function regenerateMeal(args: RegenerateMealArgs): Promise<Meal> {
   const requestBody = {
     profile: args.profile,
@@ -218,7 +272,7 @@ export async function persistPlan(userId: string, plan: Plan): Promise<void> {
   }
 }
 
-export async function loadExistingPlan(userId: string): Promise<Plan | null> {
+export async function loadExistingPlan(userId: string): Promise<(Plan & { id?: string }) | null> {
   try {
     const response = await fetch('/api/meal-plans', {
       method: 'GET',

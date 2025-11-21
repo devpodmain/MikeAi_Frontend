@@ -131,16 +131,6 @@ export default function Landing() {
                   Start Free Trial
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button 
-                  size="lg"
-                  variant="outline"
-                  className="border-2 px-8 py-6 text-lg font-bold hover:bg-gray-50"
-                  onClick={() => window.location.href = '/create-organization'}
-                  data-testid="button-organization-signup"
-                >
-                  <Users className="mr-2 h-5 w-5" />
-                  For Organizations
-                </Button>
               </div>
 
               {/* Realistic Stats */}
@@ -317,27 +307,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* TRUST & SECURITY */}
-      <section className="py-20 px-4 bg-white border-y border-gray-100">
-        <div className="container mx-auto max-w-4xl">
-          <Section className="grid md:grid-cols-3 gap-8 text-center">
-            {[
-              { icon: <Shield className="w-8 h-8" />, title: "Secure & Private", text: "Your data is encrypted and protected" },
-              { icon: <Lock className="w-8 h-8" />, title: "GDPR Compliant", text: "Enterprise-grade security standards" },
-              { icon: <Heart className="w-8 h-8" />, title: "Built for You", text: "AI that adapts to your unique needs" }
-            ].map((item, idx) => (
-              <div key={idx} className="flex flex-col items-center">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-blue-600 rounded-full flex items-center justify-center text-white mb-4 shadow-lg">
-                  {item.icon}
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-2">{item.title}</h3>
-                <p className="text-gray-600">{item.text}</p>
-              </div>
-            ))}
-          </Section>
-        </div>
-      </section>
-
       {/* FINAL CTA */}
       <section className="py-24 px-4 bg-gradient-to-br from-primary via-blue-600 to-purple-600 text-white">
         <div className="container mx-auto max-w-4xl text-center">
@@ -352,7 +321,7 @@ export default function Landing() {
             </h2>
 
             <p className="text-xl md:text-2xl mb-10 text-blue-100">
-              Start your free 10-day trial today. No credit card required.
+              Start your free trial today. No credit card required.
             </p>
 
             <Button
@@ -367,7 +336,7 @@ export default function Landing() {
             <div className="flex flex-wrap gap-6 justify-center mt-10 text-blue-100">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
-                <span>10-Day Free Trial</span>
+                <span>Free Trial</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
@@ -397,30 +366,11 @@ export default function Landing() {
             </div>
 
             <div>
-              <h4 className="font-semibold text-white mb-4">Product</h4>
-              <ul className="space-y-2 text-sm">
-                <li><a href="/signin" className="hover:text-white transition-colors">Features</a></li>
-                <li><a href="/signin" className="hover:text-white transition-colors">Pricing</a></li>
-              </ul>
-            </div>
-
-            <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
                 <li><a href="/terms" className="hover:text-white transition-colors">Terms</a></li>
                 <li><a href="/terms" className="hover:text-white transition-colors">Privacy</a></li>
               </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-white mb-4">Security</h4>
-              <div className="flex items-start gap-2 mb-3">
-                <Shield className="w-5 h-5 text-green-400 mt-0.5" />
-                <div>
-                  <p className="text-sm font-medium text-white">GDPR Compliant</p>
-                  <p className="text-xs">Enterprise-grade security</p>
-                </div>
-              </div>
             </div>
           </div>
 

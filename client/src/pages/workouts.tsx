@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "wouter";
 import { type WorkoutPlan } from "@/types/workoutPlan";
-import { generateWorkoutPlan, persistWorkoutPlan, loadExistingWorkoutPlan, deleteWorkoutPlan, getUserProfile, type WorkoutPrefs } from "@/lib/workoutPlanApi";
+import { generateWorkoutPlan, persistWorkoutPlan, loadExistingWorkoutPlan, deleteWorkoutPlan, getUserProfile, generateWorkoutPlanPreview, type WorkoutPrefs } from "@/lib/workoutPlanApi";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,14 +11,25 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Progress } from '@/components/ui/progress';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { 
   ArrowLeft, Activity, Target, Clock, Users, Dumbbell, 
   Zap, CheckCircle, Star, Trophy, Sparkles, ChevronRight,
-  Home, Calendar, RotateCcw, Trash2, Play
+  Home, Calendar, RotateCcw, Trash2, Play, X, AlertCircle, RefreshCw
 } from 'lucide-react';
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedButton } from '@/components/ui/animated-button';
 import { useAuth } from "@/hooks/useAuth";
+import { ProfileCompletionAlert } from '@/components/ProfileCompletionAlert';
+import { queryClient } from '@/lib/queryClient';
 
 const EQUIP_HOME = ["bodyweight","dumbbell","bands","kettlebell"];
 const EQUIP_GYM  = ["barbell","dumbbell","machine","cable","kettlebell","bodyweight"];
@@ -43,6 +54,12 @@ export default function WorkoutsPage() {
   const [plan, setPlan] = useState<WorkoutPlan | null>(null);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<WorkoutPlan | null>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isSavingPreview, setIsSavingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewPayloadHash, setPreviewPayloadHash] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -70,31 +87,101 @@ export default function WorkoutsPage() {
     setEquipment(undefined); // Start with no equipment selected
   }, [where]);
 
-  const canSubmit = useMemo(() => !!profile && !loading && !!daysPerWeek && !!goal, [profile, loading, daysPerWeek, goal]);
+  const canSubmit = useMemo(() => !!profile && !loading && !isPreviewing && !!daysPerWeek && !!goal, [profile, loading, isPreviewing, daysPerWeek, goal]);
 
-  async function onGenerate() {
+  async function handlePreviewGenerate() {
     if (!profile) return;
-    setLoading(true); setErr("");
+    setIsPreviewing(true);
+    setPreviewError(null);
+    setPreviewModalOpen(true);
 
-    // Build prefs with optionals only if present
+    const sortedEquipment = equipment && equipment.length > 0 ? equipment.slice().sort() : undefined;
+    
+    const normalizedProfile = {
+      ...profile,
+      where
+    };
+    
     const prefs: WorkoutPrefs = {
       goal,
       days_per_week: daysPerWeek,
       workouts_per_day: workoutsPerDay,
       ...(sessionMinutes !== undefined ? { session_minutes: sessionMinutes } : {}),
-      ...(equipment !== undefined && equipment.length > 0 ? { equipment } : {}),
+      ...(sortedEquipment ? { equipment: sortedEquipment } : {}),
       ...(injuries ? { injuries } : {}),
       ...(split ? { desired_split: split } : {})
     };
 
     try {
-      const newPlan = await generateWorkoutPlan(profile, prefs, 8);
-      setPlan(newPlan);
-      await persistWorkoutPlan(userId, newPlan);
+      const preview = await generateWorkoutPlanPreview(normalizedProfile, prefs);
+      setPreviewPlan(preview);
+      setPreviewPayloadHash(JSON.stringify({ profile: normalizedProfile, prefs }));
     } catch (e: any) {
-      setErr(e?.message || "Failed to generate workout plan");
+      setPreviewError(e?.message || "Failed to generate preview");
     } finally {
-      setLoading(false);
+      setIsPreviewing(false);
+    }
+  }
+
+  async function handleAcceptPreview() {
+    if (!previewPlan || !userId) return;
+    
+    setIsSavingPreview(true);
+    setPreviewError(null);
+    
+    let didPersist = false;
+    try {
+      await persistWorkoutPlan(userId, previewPlan);
+      didPersist = true;
+      setPlan(previewPlan);
+      await queryClient.invalidateQueries({ queryKey: ['/api/workout-plans', userId] });
+    } catch (e: any) {
+      setPreviewError(e instanceof Error ? e.message : 'Failed to save workout plan');
+    } finally {
+      setIsSavingPreview(false);
+      if (didPersist) {
+        setPreviewPlan(null);
+        setPreviewModalOpen(false);
+      }
+    }
+  }
+
+  function handleCancelPreview() {
+    setPreviewModalOpen(false);
+    if (!previewError) {
+      setPreviewPlan(null);
+    }
+    setPreviewError(null);
+  }
+
+  async function onGenerate() {
+    if (!profile) return;
+    
+    const sortedEquipment = equipment && equipment.length > 0 ? equipment.slice().sort() : undefined;
+    
+    const normalizedProfile = {
+      ...profile,
+      where
+    };
+    
+    const currentPrefs = {
+      goal,
+      days_per_week: daysPerWeek,
+      workouts_per_day: workoutsPerDay,
+      ...(sessionMinutes !== undefined ? { session_minutes: sessionMinutes } : {}),
+      ...(sortedEquipment ? { equipment: sortedEquipment } : {}),
+      ...(injuries ? { injuries } : {}),
+      ...(split ? { desired_split: split } : {})
+    };
+    
+    const currentPayloadHash = JSON.stringify({ profile: normalizedProfile, prefs: currentPrefs });
+    
+    const payloadChanged = previewPayloadHash && (previewPayloadHash !== currentPayloadHash);
+    
+    if (previewPlan && !payloadChanged) {
+      setPreviewModalOpen(true);
+    } else {
+      handlePreviewGenerate();
     }
   }
 
@@ -139,6 +226,7 @@ export default function WorkoutsPage() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
+        <ProfileCompletionAlert />
 
         {/* Create form */}
         <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl">
@@ -377,11 +465,17 @@ export default function WorkoutsPage() {
               onClick={onGenerate} 
               disabled={!canSubmit} 
               className="w-full h-14 text-lg font-semibold bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200"
+              data-testid="button-generate-workout-plan"
             >
-              {loading ? (
+              {isPreviewing ? (
                 <div className="flex items-center">
                   <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3" />
-                  Generating Your Perfect Plan...
+                  Generating Preview...
+                </div>
+              ) : loading ? (
+                <div className="flex items-center">
+                  <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-3" />
+                  Saving Your Plan...
                 </div>
               ) : (
                 <div className="flex items-center">
@@ -518,6 +612,150 @@ export default function WorkoutsPage() {
             </CardContent>
           </Card>
         )}
+
+        {/* Preview Modal */}
+        <Dialog open={previewModalOpen} onOpenChange={(open) => {
+          if (!open && isSavingPreview) return;
+          setPreviewModalOpen(open);
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                Workout Plan Preview
+              </DialogTitle>
+              <DialogDescription>
+                Review your AI-generated workout plan before saving it.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {isPreviewing ? (
+                <div className="py-12 text-center">
+                  <RefreshCw className="h-12 w-12 text-purple-600 animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Generating your personalized workout plan...</p>
+                </div>
+              ) : isSavingPreview ? (
+                <div className="py-12 text-center">
+                  <RefreshCw className="h-12 w-12 text-green-600 animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Saving your workout plan...</p>
+                </div>
+              ) : (
+                <>
+                  {previewError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{previewError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {previewPlan && (
+                    <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">{previewPlan.days?.length || 0}</div>
+                      <div className="text-sm text-gray-500">Days</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {previewPlan.days?.reduce((sum, day) => sum + (day.items?.length || 0), 0) || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">Total Exercises</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600 capitalize">
+                        {previewPlan.goal || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">Goal</div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto space-y-3">
+                    {previewPlan.days?.map((day, dayIndex) => (
+                      <Card key={dayIndex}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Dumbbell className="h-4 w-4 text-purple-600" />
+                            {day.day} - {day.focus}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {day.items?.map((exercise, exerciseIndex) => (
+                              <div key={exerciseIndex} className="p-3 bg-white dark:bg-gray-800 border rounded-lg">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-gray-900 dark:text-white">{exercise.exercise}</div>
+                                    <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                                      {exercise.sets} sets × {exercise.reps} reps
+                                      {exercise.restSec && ` • ${exercise.restSec}s rest`}
+                                    </div>
+                                    {exercise.notes && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        {typeof exercise.notes === 'object' ? JSON.stringify(exercise.notes) : String(exercise.notes)}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+
+                  {/* Plan Notes */}
+                  {(previewPlan.progression_notes || previewPlan.warmup_notes) && (
+                    <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                      <h4 className="font-semibold text-blue-800 dark:text-blue-200 mb-2">Plan Notes</h4>
+                      {previewPlan.progression_notes && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mb-2">
+                          <strong>Progression:</strong> {typeof previewPlan.progression_notes === 'object' ? JSON.stringify(previewPlan.progression_notes) : String(previewPlan.progression_notes)}
+                        </p>
+                      )}
+                      {previewPlan.warmup_notes && (
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          <strong>Warmup:</strong> {typeof previewPlan.warmup_notes === 'object' ? JSON.stringify(previewPlan.warmup_notes) : String(previewPlan.warmup_notes)}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleCancelPreview}
+                disabled={isPreviewing || isSavingPreview}
+                data-testid="button-cancel-workout-preview"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAcceptPreview}
+                disabled={isPreviewing || isSavingPreview || !previewPlan}
+                data-testid="button-accept-workout-preview"
+              >
+                {isSavingPreview ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Accept & Save Plan
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

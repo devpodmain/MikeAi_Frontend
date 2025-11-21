@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { Sparkles, Calendar, AlertCircle, RefreshCw, ArrowLeft, Trash2 } from 'lucide-react';
+import { Sparkles, Calendar, AlertCircle, RefreshCw, ArrowLeft, Trash2, CheckCircle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,14 +19,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { MealDay } from '@/components/MealDay';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { useAuth } from '@/hooks/useAuth';
+import { ProfileCompletionAlert } from '@/components/ProfileCompletionAlert';
+import { generatePlanPreview, getUserProfile, persistPlan } from '@/lib/mealPlanApi';
+import { queryClient } from '@/lib/queryClient';
 
 export default function MealPlanDashboard() {
   const { user } = useAuth();
   const [selectedDays, setSelectedDays] = useState<7 | 14>(7);
   const [selectedMeals, setSelectedMeals] = useState<3 | 5>(5);
+  const [previewModalOpen, setPreviewModalOpen] = useState(false);
+  const [previewPlan, setPreviewPlan] = useState<any>(null);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const [isSavingPreview, setIsSavingPreview] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [previewSettings, setPreviewSettings] = useState<{days: 7 | 14, meals: 3 | 5} | null>(null);
   
   const {
     plan,
@@ -44,19 +61,88 @@ export default function MealPlanDashboard() {
     hasExistingPlan,
   } = useMealPlan(user?.id || '');
 
+  const handlePreviewGenerate = async () => {
+    if (!user?.id) return;
+    
+    setIsPreviewing(true);
+    setPreviewError(null);
+    setPreviewModalOpen(true);
+    
+    try {
+      const profile = await getUserProfile(user.id);
+      const preview = await generatePlanPreview(profile, selectedDays, selectedMeals);
+      setPreviewPlan(preview);
+      setPreviewSettings({ days: selectedDays, meals: selectedMeals });
+    } catch (err: any) {
+      setPreviewError(err.message || 'Failed to generate preview');
+    } finally {
+      setIsPreviewing(false);
+    }
+  };
+
+  const handleAcceptPreview = async () => {
+    if (!user?.id || !previewPlan) return;
+    
+    setIsSavingPreview(true);
+    setPreviewError(null);
+    
+    let didPersist = false;
+    try {
+      await persistPlan(user.id, previewPlan);
+      didPersist = true;
+      await queryClient.invalidateQueries({ queryKey: ['/api/meal-plans', user.id] });
+    } catch (err: any) {
+      setPreviewError(err instanceof Error ? err.message : 'Failed to save plan');
+    } finally {
+      setIsSavingPreview(false);
+      if (didPersist) {
+        setPreviewPlan(null);
+        setPreviewModalOpen(false);
+      }
+    }
+  };
+
+  const handleCancelPreview = () => {
+    setPreviewModalOpen(false);
+    if (!previewError) {
+      setPreviewPlan(null);
+    }
+    setPreviewError(null);
+  };
+
   const handleGenerate = () => {
     console.log('=== BUTTON CLICKED ===');
     console.log('Selected days:', selectedDays);
     console.log('Selected meals:', selectedMeals);
     console.log('User ID:', user?.id);
     console.log('Has existing plan:', hasExistingPlan);
-    generate({ days: selectedDays, mealsPerDay: selectedMeals });
+    
+    const settingsChanged = previewSettings && (
+      previewSettings.days !== selectedDays || 
+      previewSettings.meals !== selectedMeals
+    );
+    
+    if (previewPlan && !settingsChanged) {
+      setPreviewModalOpen(true);
+    } else {
+      handlePreviewGenerate();
+    }
   };
 
   const handleOverwriteGenerate = () => {
     console.log('=== OVERWRITE BUTTON CLICKED ===');
     clearPlan();
-    handleGenerate();
+    
+    const settingsChanged = previewSettings && (
+      previewSettings.days !== selectedDays || 
+      previewSettings.meals !== selectedMeals
+    );
+    
+    if (previewPlan && !settingsChanged) {
+      setPreviewModalOpen(true);
+    } else {
+      handlePreviewGenerate();
+    }
   };
 
   const completedMeals = plan?.days.reduce((total, day) => 
@@ -86,6 +172,8 @@ export default function MealPlanDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-6xl mx-auto p-6">
+        <ProfileCompletionAlert />
+        
         {/* Back Button */}
         <div className="mb-6">
           <Link to="/user-home">
@@ -158,7 +246,7 @@ export default function MealPlanDashboard() {
                 {hasExistingPlan ? (
                   <AlertDialog>
                     <AlertDialogTrigger asChild>
-                      <Button disabled={isGenerating} className="px-6">
+                      <Button disabled={isGenerating || isPreviewing} className="px-6" data-testid="button-generate-meal-plan">
                         <Sparkles className="h-4 w-4 mr-2" />
                         Generate Plan
                       </Button>
@@ -173,15 +261,15 @@ export default function MealPlanDashboard() {
                       <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleOverwriteGenerate}>
-                          Generate New Plan
+                          Preview New Plan
                         </AlertDialogAction>
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
                 ) : (
-                  <Button onClick={handleGenerate} disabled={isGenerating} className="px-6">
+                  <Button onClick={handleGenerate} disabled={isGenerating || isPreviewing} className="px-6" data-testid="button-generate-meal-plan">
                     <Sparkles className="h-4 w-4 mr-2" />
-                    {isGenerating ? 'Generating...' : 'Generate Plan'}
+                    {isPreviewing ? 'Generating Preview...' : isGenerating ? 'Saving...' : 'Generate Plan'}
                   </Button>
                 )}
               </div>
@@ -310,6 +398,128 @@ export default function MealPlanDashboard() {
             </CardContent>
           </Card>
         )}
+
+        {/* Preview Modal */}
+        <Dialog open={previewModalOpen} onOpenChange={(open) => {
+          if (!open && isSavingPreview) return;
+          setPreviewModalOpen(open);
+        }}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-purple-600" />
+                Meal Plan Preview
+              </DialogTitle>
+              <DialogDescription>
+                Review your AI-generated meal plan before saving it.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              {isPreviewing ? (
+                <div className="py-12 text-center">
+                  <RefreshCw className="h-12 w-12 text-purple-600 animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Generating your personalized meal plan...</p>
+                </div>
+              ) : isSavingPreview ? (
+                <div className="py-12 text-center">
+                  <RefreshCw className="h-12 w-12 text-green-600 animate-spin mx-auto mb-4" />
+                  <p className="text-gray-600">Saving your meal plan...</p>
+                </div>
+              ) : (
+                <>
+                  {previewError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{previewError}</AlertDescription>
+                    </Alert>
+                  )}
+                  {previewPlan && (
+                    <div className="space-y-4">
+                  <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-purple-600">{previewPlan.days?.length || 0}</div>
+                      <div className="text-sm text-gray-500">Days</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-blue-600">
+                        {previewPlan.days?.reduce((sum: number, day: any) => sum + (day.meals?.length || 0), 0) || 0}
+                      </div>
+                      <div className="text-sm text-gray-500">Total Meals</div>
+                    </div>
+                    <div className="text-center">
+                      <div className="text-2xl font-bold text-green-600">
+                        {previewPlan.metadata?.calorie_target || 'N/A'}
+                      </div>
+                      <div className="text-sm text-gray-500">Cal/Day Target</div>
+                    </div>
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto space-y-3">
+                    {previewPlan.days?.map((day: any, dayIndex: number) => (
+                      <Card key={dayIndex}>
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-lg flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-blue-600" />
+                            Day {dayIndex + 1} - {day.date}
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2">
+                            {day.meals?.map((meal: any, mealIndex: number) => (
+                              <div key={mealIndex} className="p-3 bg-white dark:bg-gray-800 border rounded-lg">
+                                <div className="flex items-start justify-between">
+                                  <div className="flex-1">
+                                    <div className="font-medium text-gray-900 dark:text-white">{meal.slot}</div>
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">{meal.name}</div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {meal.calories} cal | P: {meal.protein}g | C: {meal.carbs}g | F: {meal.fats}g
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button 
+                variant="outline" 
+                onClick={handleCancelPreview}
+                disabled={isPreviewing || isSavingPreview}
+                data-testid="button-cancel-preview"
+              >
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleAcceptPreview}
+                disabled={isPreviewing || isSavingPreview || !previewPlan}
+                data-testid="button-accept-preview"
+              >
+                {isSavingPreview ? (
+                  <>
+                    <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Accept & Save Plan
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );

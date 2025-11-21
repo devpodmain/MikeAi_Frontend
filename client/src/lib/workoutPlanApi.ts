@@ -1,7 +1,7 @@
 import type { WorkoutPlan } from "@/types/workoutPlan";
 import type { Profile as MealProfile } from "@/types/mealPlan";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://mikeai.co/fastapi";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
 
 export class WorkoutPlanApiError extends Error {
   constructor(message: string, public status?: number) {
@@ -95,6 +95,72 @@ export async function generateWorkoutPlan(
   } catch (e) {
     if (e instanceof WorkoutPlanApiError) throw e;
     throw new WorkoutPlanApiError("Network error while generating workout plan");
+  }
+}
+
+/** Generate a workout plan preview (without saving to database) */
+export async function generateWorkoutPlanPreview(
+  dbProfile: any,
+  prefs: WorkoutPrefs,
+  weeks: number = 8
+): Promise<WorkoutPlan> {
+  // Build prefs payload with only provided optionals
+  const prefsPayload: any = {
+    goal: prefs.goal,
+    days_per_week: prefs.days_per_week,
+  };
+  if (prefs.workouts_per_day !== undefined) prefsPayload.workouts_per_day = prefs.workouts_per_day;
+  if (prefs.session_minutes !== undefined) prefsPayload.session_minutes = prefs.session_minutes;
+  if (prefs.equipment !== undefined) prefsPayload.equipment = prefs.equipment;
+  if (prefs.injuries) prefsPayload.injuries = prefs.injuries;
+  if (prefs.desired_split) prefsPayload.desired_split = prefs.desired_split;
+
+  const body = {
+    profile: mapDbProfileToWorkout(dbProfile),
+    prefs: prefsPayload,
+    weeks
+  };
+
+  console.log("=== CALLING WORKOUT PLAN PREVIEW API ===");
+  console.log("Request Body:", JSON.stringify(body, null, 2));
+
+  try {
+    const response = await fetch("/api/workout-plans/preview", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      credentials: "include",
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch {
+        // Use default error message if JSON parsing fails
+      }
+      throw new WorkoutPlanApiError(errorMessage, response.status);
+    }
+
+    const data = await response.json();
+
+    console.log("=== WORKOUT PLAN PREVIEW API RESPONSE ===");
+    console.log("Response:", data);
+
+    if (!data.success || !data.data) {
+      throw new WorkoutPlanApiError("Failed to generate workout plan preview");
+    }
+
+    return data.data as WorkoutPlan;
+  } catch (error) {
+    console.error("=== WORKOUT PLAN PREVIEW API ERROR ===", error);
+    if (error instanceof WorkoutPlanApiError) {
+      throw error;
+    }
+    throw new WorkoutPlanApiError("Network error while generating workout plan preview");
   }
 }
 
