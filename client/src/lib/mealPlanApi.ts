@@ -1,6 +1,6 @@
 import { Profile, Plan, Meal, RegenerateMealArgs } from "@/types/mealPlan";
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000";
+const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8000/fastapi";
 
 class MealPlanApiError extends Error {
   constructor(
