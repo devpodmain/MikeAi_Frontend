@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,9 @@ export default function OrgTrackMeals() {
     ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][new Date().getDay()]
   );
   const today = format(new Date(), 'yyyy-MM-dd');
+  
+  // Track last mutation time to prevent race condition with cache refetch
+  const lastMutationTime = useRef<number>(0);
   
   // Calculate the date for the selected weekday
   const weekdayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
@@ -144,8 +147,17 @@ export default function OrgTrackMeals() {
   const meals: Meal[] = selectedDayMeals?.meals || [];
 
   // Sync completed meals from existing logs for selected date
+  // RACE CONDITION FIX: Only sync if no recent mutations (prevents cache refetch from overwriting optimistic updates)
   useEffect(() => {
     if (existingLogs && Array.isArray(existingLogs)) {
+      const timeSinceLastMutation = Date.now() - lastMutationTime.current;
+      
+      // If a mutation happened less than 1000ms ago, skip sync to preserve optimistic update
+      // The mutation's onSuccess will invalidate cache, and the next sync will have fresh data
+      if (timeSinceLastMutation < 1000) {
+        return;
+      }
+      
       const completed = new Set<string>();
       (existingLogs as any[])
         .forEach((logEntry: any) => {
@@ -181,6 +193,9 @@ export default function OrgTrackMeals() {
   });
 
   const toggleMealComplete = (mealData: any) => {
+    // Track mutation timestamp to prevent race condition with cache refetch
+    lastMutationTime.current = Date.now();
+    
     // Create unique identifier using meal name + type to support multiple snacks
     const mealIdentifier = `${mealData.name}|${mealData.type}`;
     const legacyIdentifier = mealData.type?.toLowerCase() || 'snack';
