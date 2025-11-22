@@ -23,7 +23,7 @@ import {
 import { 
   ArrowLeft, Activity, Target, Clock, Users, Dumbbell, 
   Zap, CheckCircle, Star, Trophy, Sparkles, ChevronRight,
-  Home, Calendar, RotateCcw, Trash2, Play, X, AlertCircle, RefreshCw
+  Home, Calendar, RotateCcw, Trash2, Play, X, AlertCircle, RefreshCw, Loader2
 } from 'lucide-react';
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedButton } from '@/components/ui/animated-button';
@@ -615,10 +615,60 @@ export default function WorkoutsPage() {
 
         {/* Preview Modal */}
         <Dialog open={previewModalOpen} onOpenChange={(open) => {
-          if (!open && isSavingPreview) return;
+          if (!open && (isPreviewing || isSavingPreview)) return;
           setPreviewModalOpen(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto relative">
+            {/* Loading Overlay for Previewing */}
+            {isPreviewing && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
+                      AI is Creating Your Workout Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Designing exercises and training schedule based on your goals...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Loading Overlay for Saving */}
+            {isSavingPreview && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-green-600 animate-spin mx-auto" />
+                    <CheckCircle className="w-8 h-8 text-green-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-green-900 dark:text-green-300 mb-2">
+                      Saving Your Workout Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Almost there! Saving your plan to the dashboard...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-purple-600" />
@@ -630,17 +680,7 @@ export default function WorkoutsPage() {
             </DialogHeader>
 
             <div className="space-y-4">
-              {isPreviewing ? (
-                <div className="py-12 text-center">
-                  <RefreshCw className="h-12 w-12 text-purple-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Generating your personalized workout plan...</p>
-                </div>
-              ) : isSavingPreview ? (
-                <div className="py-12 text-center">
-                  <RefreshCw className="h-12 w-12 text-green-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Saving your workout plan...</p>
-                </div>
-              ) : (
+              {!isPreviewing && !isSavingPreview && (
                 <>
                   {previewError && (
                     <Alert variant="destructive">
@@ -675,7 +715,7 @@ export default function WorkoutsPage() {
                         <CardHeader className="pb-3">
                           <CardTitle className="text-lg flex items-center gap-2">
                             <Dumbbell className="h-4 w-4 text-purple-600" />
-                            {day.day} - {day.focus}
+                            {day.name || `Day ${dayIndex + 1}`}
                           </CardTitle>
                         </CardHeader>
                         <CardContent>

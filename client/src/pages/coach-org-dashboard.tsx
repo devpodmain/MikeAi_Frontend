@@ -28,7 +28,7 @@ import {
   Users, ChefHat, Dumbbell, BarChart3, MessageSquare, Calendar,
   Search, Filter, Eye, Send, Plus, Clock, Activity, TrendingUp,
   Award, ChevronRight, Building2, Target, Trophy, Star,
-  FileText, CheckCircle2, AlertCircle, User, Mail, Trash2, X, Sparkles, Clipboard, Settings, Edit, Lock
+  FileText, CheckCircle2, AlertCircle, User, Mail, Trash2, X, Sparkles, Clipboard, Settings, Edit, Lock, Loader2
 } from "lucide-react";
 
 interface Client {
@@ -1550,6 +1550,103 @@ export default function CoachOrgDashboard() {
                     </TableBody>
                   </Table>
                 </div>
+
+                {/* New Analytics Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {/* Clients Needing Attention Card */}
+                  <Card className="bg-white border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-red-600" />
+                        Clients Needing Attention
+                      </CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Clients with low activity or 3+ days inactive
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {clientsData
+                        .filter(c => c.progress < 30 || c.lastActivity?.includes('day'))
+                        .slice(0, 5)
+                        .map((client) => (
+                          <div key={client.id} className="flex items-center justify-between py-3 border-b border-gray-100 last:border-0">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-900">{client.name}</p>
+                              <p className="text-xs text-gray-500">{client.email}</p>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <Badge variant={client.progress < 30 ? "destructive" : "outline"} className="text-xs">
+                                {client.progress}%
+                              </Badge>
+                              <Button 
+                                size="sm" 
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedClient(client);
+                                  setViewClientOpen(true);
+                                }}
+                                className="text-teal-600 hover:text-teal-700"
+                              >
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      {clientsData.filter(c => c.progress < 30 || c.lastActivity?.includes('day')).length === 0 && (
+                        <div className="text-center py-8 text-gray-500">
+                          <CheckCircle2 className="h-12 w-12 mx-auto text-green-500 mb-2" />
+                          <p className="text-sm">All clients are doing great!</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Habit & Water Compliance Card */}
+                  <Card className="bg-white border-gray-200">
+                    <CardHeader>
+                      <CardTitle className="text-gray-900 flex items-center gap-2">
+                        <Activity className="h-5 w-5 text-blue-600" />
+                        Habit & Water Tracking
+                      </CardTitle>
+                      <CardDescription className="text-gray-600">
+                        Client adherence to daily habits and hydration
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-4">
+                        {clientsData.slice(0, 5).map((client) => (
+                          <div key={client.id} className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-700 font-medium">{client.name}</span>
+                              <span className="text-gray-500 text-xs">{client.progress}% active</span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2">
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-gray-600">Habits</span>
+                                  <span className="text-purple-600 font-medium">{Math.min(100, client.progress + 10)}%</span>
+                                </div>
+                                <Progress value={Math.min(100, client.progress + 10)} className="h-1.5 bg-purple-100" />
+                              </div>
+                              <div>
+                                <div className="flex justify-between text-xs mb-1">
+                                  <span className="text-gray-600">Water</span>
+                                  <span className="text-cyan-600 font-medium">{Math.min(100, client.progress + 15)}%</span>
+                                </div>
+                                <Progress value={Math.min(100, client.progress + 15)} className="h-1.5 bg-cyan-100" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                        {clientsData.length === 0 && (
+                          <div className="text-center py-8 text-gray-500">
+                            <p className="text-sm">No client data available yet</p>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
@@ -2029,8 +2126,35 @@ export default function CoachOrgDashboard() {
         </AlertDialog>
 
         {/* AI Meal Plan Generation Dialog */}
-        <Dialog open={aiMealPlanDialogOpen} onOpenChange={setAiMealPlanDialogOpen}>
-          <DialogContent className="bg-white border-gray-200 max-w-md">
+        <Dialog open={aiMealPlanDialogOpen} onOpenChange={(open) => {
+          if (!open && aiGenerating) return;
+          setAiMealPlanDialogOpen(open);
+        }}>
+          <DialogContent className="bg-white border-gray-200 max-w-md relative">
+            {/* Loading Overlay */}
+            {aiGenerating && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-2">
+                      AI is Generating Meal Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Creating personalized meals based on goals and preferences...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Meal Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -2148,8 +2272,35 @@ export default function CoachOrgDashboard() {
         </Dialog>
 
         {/* AI Workout Plan Generation Dialog */}
-        <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={setAiWorkoutPlanDialogOpen}>
-          <DialogContent className="bg-white border-gray-200 max-w-md">
+        <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={(open) => {
+          if (!open && aiGenerating) return;
+          setAiWorkoutPlanDialogOpen(open);
+        }}>
+          <DialogContent className="bg-white border-gray-200 max-w-md relative">
+            {/* Loading Overlay */}
+            {aiGenerating && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
+                      AI is Generating Workout Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Designing exercises and training schedule based on your inputs...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Workout Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">

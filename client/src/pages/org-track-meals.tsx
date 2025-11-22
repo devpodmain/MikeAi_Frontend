@@ -217,6 +217,7 @@ export default function OrgTrackMeals() {
     if (isCurrentlyCompleted) {
       deleteMealMutation.mutate({ mealIdentifier, legacyIdentifier, selectedDate }, {
         onSuccess: () => {
+          lastMutationTime.current = Date.now();
           // Invalidate cache with full query key to ensure refetch
           queryClient.invalidateQueries({ queryKey: ['/api/meal-logs', (user as any)?.id, selectedDate] });
         },
@@ -235,6 +236,7 @@ export default function OrgTrackMeals() {
         logDate: selectedDate,
       }, {
         onSuccess: () => {
+          lastMutationTime.current = Date.now();
           // Invalidate cache with full query key to ensure refetch
           queryClient.invalidateQueries({ queryKey: ['/api/meal-logs', (user as any)?.id, selectedDate] });
         },

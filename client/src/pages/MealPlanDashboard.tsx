@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'wouter';
-import { Sparkles, Calendar, AlertCircle, RefreshCw, ArrowLeft, Trash2, CheckCircle, X } from 'lucide-react';
+import { Sparkles, Calendar, AlertCircle, RefreshCw, ArrowLeft, Trash2, CheckCircle, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -401,10 +401,60 @@ export default function MealPlanDashboard() {
 
         {/* Preview Modal */}
         <Dialog open={previewModalOpen} onOpenChange={(open) => {
-          if (!open && isSavingPreview) return;
+          if (!open && (isPreviewing || isSavingPreview)) return;
           setPreviewModalOpen(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto relative">
+            {/* Loading Overlay for Previewing */}
+            {isPreviewing && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-2">
+                      AI is Creating Your Meal Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Analyzing your profile and generating personalized meals...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Loading Overlay for Saving */}
+            {isSavingPreview && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-green-600 animate-spin mx-auto" />
+                    <CheckCircle className="w-8 h-8 text-green-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-green-900 dark:text-green-300 mb-2">
+                      Saving Your Meal Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Almost there! Saving your plan to the dashboard...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-green-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Sparkles className="h-5 w-5 text-purple-600" />
@@ -416,17 +466,7 @@ export default function MealPlanDashboard() {
             </DialogHeader>
 
             <div className="space-y-4">
-              {isPreviewing ? (
-                <div className="py-12 text-center">
-                  <RefreshCw className="h-12 w-12 text-purple-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Generating your personalized meal plan...</p>
-                </div>
-              ) : isSavingPreview ? (
-                <div className="py-12 text-center">
-                  <RefreshCw className="h-12 w-12 text-green-600 animate-spin mx-auto mb-4" />
-                  <p className="text-gray-600">Saving your meal plan...</p>
-                </div>
-              ) : (
+              {!isPreviewing && !isSavingPreview && (
                 <>
                   {previewError && (
                     <Alert variant="destructive">

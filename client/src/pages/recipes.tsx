@@ -123,7 +123,7 @@ export default function Recipes() {
         </div>
 
         {/* Search Form */}
-        <Card className="mb-8 shadow-lg border-orange-200 dark:border-slate-700">
+        <Card className="mb-8 shadow-lg border-orange-200 dark:border-slate-700 relative">
           <CardHeader className="bg-gradient-to-r from-orange-100 to-amber-100 dark:from-slate-800 dark:to-slate-700 border-b">
             <CardTitle className="flex items-center gap-2 text-orange-900 dark:text-orange-300">
               <Sparkles className="w-5 h-5" />
@@ -131,6 +131,30 @@ export default function Recipes() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-6">
+            {/* Loading Overlay */}
+            {isGenerating && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-orange-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-amber-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-orange-900 dark:text-orange-300 mb-2">
+                      AI is Creating Your Recipe
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Analyzing ingredients, cooking methods, and preparing detailed instructions...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-orange-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
             {/* Dish Name */}
             <div className="space-y-2">
               <Label htmlFor="dish-name" className="text-sm font-semibold">

@@ -25,7 +25,7 @@ import {
   BarChart3, MessageSquare, Calendar, Plus, Search, Filter,
   Mail, Phone, Clock, Activity, TrendingUp, Award, Edit,
   Trash2, Send, AlertCircle, CheckCircle2, X, ChevronRight,
-  FileText, Settings, Eye, UserCheck, UserX, Clipboard, Sparkles, Lock
+  FileText, Settings, Eye, UserCheck, UserX, Clipboard, Sparkles, Lock, Loader2
 } from "lucide-react";
 import { OrgMessaging } from "@/components/org-messaging";
 import { DayMappingEditor } from "@/components/DayMappingEditor";
@@ -2022,7 +2022,129 @@ export default function OrgOwnerDashboard() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Team Capacity Card */}
+              <Card className="bg-white border-gray-200">
+                <CardHeader>
+                  <CardTitle className="text-gray-900 flex items-center gap-2">
+                    <Users className="h-5 w-5 text-amber-600" />
+                    Team Capacity
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {loadingAnalytics ? (
+                    <Skeleton className="h-40" />
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Coaches */}
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-700 font-medium">Coaches</span>
+                          <span className="text-sm text-gray-900 font-bold">
+                            {analytics?.teamCapacity?.coachesUsed || 0} / {analytics?.teamCapacity?.coachesAllowed || 0}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={analytics?.teamCapacity?.coachesAllowed > 0 
+                            ? (analytics?.teamCapacity?.coachesUsed / analytics?.teamCapacity?.coachesAllowed) * 100 
+                            : 0
+                          } 
+                          className="h-3" 
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {analytics?.teamCapacity?.coachesAllowed > 0 
+                            ? `${analytics?.teamCapacity?.coachesAllowed - analytics?.teamCapacity?.coachesUsed} slots available`
+                            : 'No capacity set'}
+                        </p>
+                      </div>
+                      
+                      {/* Clients */}
+                      <div>
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-sm text-gray-700 font-medium">Clients</span>
+                          <span className="text-sm text-gray-900 font-bold">
+                            {analytics?.teamCapacity?.clientsUsed || 0} / {analytics?.teamCapacity?.clientsAllowed || 0}
+                          </span>
+                        </div>
+                        <Progress 
+                          value={analytics?.teamCapacity?.clientsAllowed > 0 
+                            ? (analytics?.teamCapacity?.clientsUsed / analytics?.teamCapacity?.clientsAllowed) * 100 
+                            : 0
+                          } 
+                          className="h-3" 
+                        />
+                        <p className="text-xs text-gray-500 mt-1">
+                          {analytics?.teamCapacity?.clientsAllowed > 0 
+                            ? `${analytics?.teamCapacity?.clientsAllowed - analytics?.teamCapacity?.clientsUsed} slots available`
+                            : 'No capacity set'}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
+
+            {/* Activity Trend Chart - Full Width */}
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="text-gray-900 flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  Activity Trend (Last 30 Days)
+                </CardTitle>
+                <CardDescription className="text-gray-600">
+                  Daily client engagement across all activities
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {loadingAnalytics ? (
+                  <Skeleton className="h-64" />
+                ) : (
+                  <div className="h-64">
+                    {analytics?.activityTrend && analytics.activityTrend.length > 0 ? (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-4 gap-4 mb-4">
+                          <div className="text-center p-3 bg-blue-50 rounded-lg">
+                            <div className="text-2xl font-bold text-blue-600">
+                              {analytics.activityTrend.reduce((sum: number, day: any) => sum + (day.workouts || 0), 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">Total Workouts</div>
+                          </div>
+                          <div className="text-center p-3 bg-green-50 rounded-lg">
+                            <div className="text-2xl font-bold text-green-600">
+                              {analytics.activityTrend.reduce((sum: number, day: any) => sum + (day.meals || 0), 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">Total Meals</div>
+                          </div>
+                          <div className="text-center p-3 bg-purple-50 rounded-lg">
+                            <div className="text-2xl font-bold text-purple-600">
+                              {analytics.activityTrend.reduce((sum: number, day: any) => sum + (day.habits || 0), 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">Total Habits</div>
+                          </div>
+                          <div className="text-center p-3 bg-cyan-50 rounded-lg">
+                            <div className="text-2xl font-bold text-cyan-600">
+                              {analytics.activityTrend.reduce((sum: number, day: any) => sum + (day.water || 0), 0)}
+                            </div>
+                            <div className="text-xs text-gray-600">Total Water Logs</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-600 text-center">
+                          Showing activity from {new Date(analytics.activityTrend[0].date).toLocaleDateString()} to {new Date(analytics.activityTrend[analytics.activityTrend.length - 1].date).toLocaleDateString()}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-500">
+                        <div className="text-center">
+                          <TrendingUp className="h-12 w-12 mx-auto text-gray-300 mb-2" />
+                          <p>No activity data available yet</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Settings Tab - Redirect to dedicated settings page */}
@@ -2670,8 +2792,35 @@ export default function OrgOwnerDashboard() {
         </AlertDialog>
 
         {/* AI Meal Plan Generation Dialog */}
-        <Dialog open={aiMealPlanDialogOpen} onOpenChange={setAiMealPlanDialogOpen}>
-          <DialogContent className="bg-white border-gray-200 max-w-md">
+        <Dialog open={aiMealPlanDialogOpen} onOpenChange={(open) => {
+          if (!open && aiGenerating) return;
+          setAiMealPlanDialogOpen(open);
+        }}>
+          <DialogContent className="bg-white border-gray-200 max-w-md relative">
+            {/* Loading Overlay */}
+            {aiGenerating && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-2">
+                      AI is Generating Meal Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Creating personalized meals based on goals and preferences...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Meal Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -2789,8 +2938,35 @@ export default function OrgOwnerDashboard() {
         </Dialog>
 
         {/* AI Workout Plan Generation Dialog */}
-        <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={setAiWorkoutPlanDialogOpen}>
-          <DialogContent className="bg-white border-gray-200 max-w-md">
+        <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={(open) => {
+          if (!open && aiGenerating) return;
+          setAiWorkoutPlanDialogOpen(open);
+        }}>
+          <DialogContent className="bg-white border-gray-200 max-w-md relative">
+            {/* Loading Overlay */}
+            {aiGenerating && (
+              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+                <div className="text-center space-y-4 p-8">
+                  <div className="relative">
+                    <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
+                    <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
+                      AI is Generating Workout Plan
+                    </h3>
+                    <p className="text-gray-600 dark:text-gray-400">
+                      Designing exercises and training schedule based on your inputs...
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Workout Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">
