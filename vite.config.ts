@@ -35,4 +35,9 @@ export default defineConfig({
     },
     port: 3000
   },
+  //this removes all console.* and debugger statements in production builds
+  esbuild: {
+    drop: process.env.NODE_ENV === "production" ? ["console", "debugger"] : [],
+  },
+  //remove this block to show console logs in production
 });

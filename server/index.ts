@@ -4,6 +4,16 @@ import path from "path";
 import { registerRoutes } from "./routes";
 import { log, setupVite, serveStatic } from "./vite";
 
+if (process.env.NODE_ENV === "production") {
+  const noop = () => {};
+  console.log = noop;
+  console.info = noop;
+  console.debug = noop;
+  // If you also want to hide warnings, uncomment:
+  console.warn = noop;
+  // I recommend keeping console.error so you still see errors in logs.
+}
+
 const app = express();
 const __dirname = path.resolve();
 
