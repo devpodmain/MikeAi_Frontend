@@ -10,6 +10,7 @@ interface Payment {
   expiresAt: string;
 }
 
+
 export default function AIHub() {
   const { user } = useAuth();
   
