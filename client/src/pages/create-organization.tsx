@@ -275,7 +275,7 @@ export default function CreateOrganization() {
                   <div className="bg-white p-4 rounded-lg border border-gray-200">
                     <div className="flex items-center justify-between mb-2">
                       <h4 className="font-semibold text-gray-900">PRO Tier</h4>
-                      <span className="text-sm font-medium text-gray-900">$249/month</span>
+                      <span className="text-sm font-medium text-gray-900">$149/month</span>
                     </div>
                     <ul className="space-y-1 text-sm text-gray-700">
                       <li className="flex items-start">

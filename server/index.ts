@@ -11,6 +11,7 @@ if (process.env.NODE_ENV === "production") {
   console.debug = noop;
   // If you also want to hide warnings, uncomment:
   console.warn = noop;
+  console.error = noop;
   // I recommend keeping console.error so you still see errors in logs.
 }
 
