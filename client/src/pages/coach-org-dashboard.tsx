@@ -687,7 +687,7 @@ export default function CoachOrgDashboard() {
       console.log("Meals per day:", aiMealForm.mealsPerDay);
 
       // Call AI endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi'}/ai/meal-plans/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/ai/meal-plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -782,7 +782,7 @@ export default function CoachOrgDashboard() {
       };
 
       // Call AI endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi'}/ai/workouts/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/ai/workouts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -2130,31 +2130,7 @@ export default function CoachOrgDashboard() {
           if (!open && aiGenerating) return;
           setAiMealPlanDialogOpen(open);
         }}>
-          <DialogContent className="bg-white border-gray-200 max-w-md relative">
-            {/* Loading Overlay */}
-            {aiGenerating && (
-              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-                <div className="text-center space-y-4 p-8">
-                  <div className="relative">
-                    <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
-                    <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-2">
-                      AI is Generating Meal Plan
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Creating personalized meals based on goals and preferences...
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
+          <DialogContent className="bg-white border-gray-200 max-w-md">
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Meal Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -2256,17 +2232,31 @@ export default function CoachOrgDashboard() {
                 </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={generateAIMealPlan}
-                disabled={aiGenerating}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                {aiGenerating ? "Generating..." : "Generate Plan"}
-              </Button>
+            <DialogFooter className="flex-col items-start gap-3">
+              {aiGenerating && (
+                <div className="w-full text-center space-y-2">
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    AI is generating your personalized meal plan...
+                  </p>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+              <div className="flex w-full justify-end gap-2">
+                <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)} disabled={aiGenerating}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={generateAIMealPlan}
+                  disabled={aiGenerating}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -2276,31 +2266,7 @@ export default function CoachOrgDashboard() {
           if (!open && aiGenerating) return;
           setAiWorkoutPlanDialogOpen(open);
         }}>
-          <DialogContent className="bg-white border-gray-200 max-w-md relative">
-            {/* Loading Overlay */}
-            {aiGenerating && (
-              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-                <div className="text-center space-y-4 p-8">
-                  <div className="relative">
-                    <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
-                    <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
-                      AI is Generating Workout Plan
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Designing exercises and training schedule based on your inputs...
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
+          <DialogContent className="bg-white border-gray-200 max-w-md">
             <DialogHeader>
               <DialogTitle className="text-gray-900">Generate Workout Plan with AI</DialogTitle>
               <DialogDescription className="text-gray-600">
@@ -2380,17 +2346,31 @@ export default function CoachOrgDashboard() {
                 </Select>
               </div>
             </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)}>
-                Cancel
-              </Button>
-              <Button 
-                onClick={generateAIWorkoutPlan}
-                disabled={aiGenerating}
-                className="bg-blue-500 hover:bg-blue-600"
-              >
-                {aiGenerating ? "Generating..." : "Generate Plan"}
-              </Button>
+            <DialogFooter className="flex-col items-start gap-3">
+              {aiGenerating && (
+                <div className="w-full text-center space-y-2">
+                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                    AI is generating your personalized workout plan...
+                  </p>
+                  <div className="flex items-center justify-center gap-1">
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
+              <div className="flex w-full justify-end gap-2">
+                <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)} disabled={aiGenerating}>
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={generateAIWorkoutPlan}
+                  disabled={aiGenerating}
+                  className="bg-blue-500 hover:bg-blue-600"
+                >
+                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                </Button>
+              </div>
             </DialogFooter>
           </DialogContent>
         </Dialog>
