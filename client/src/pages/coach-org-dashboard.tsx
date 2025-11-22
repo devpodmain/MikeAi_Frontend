@@ -687,7 +687,7 @@ export default function CoachOrgDashboard() {
       console.log("Meals per day:", aiMealForm.mealsPerDay);
 
       // Call AI endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/ai/meal-plans/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi'}/ai/meal-plans/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -782,7 +782,7 @@ export default function CoachOrgDashboard() {
       };
 
       // Call AI endpoint
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/ai/workouts/generate`, {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi'}/ai/workouts/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
