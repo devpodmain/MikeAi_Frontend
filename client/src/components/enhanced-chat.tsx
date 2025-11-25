@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { Send, Loader2, Bot, User, Mic, MicOff, Paperclip, Volume2, VolumeX, X, ArrowLeft, Trash2 } from 'lucide-react';
+import { Send, Loader2, Bot, User, Volume2, VolumeX, ArrowLeft, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Link } from 'wouter';
 import ReactMarkdown from 'react-markdown';
@@ -58,13 +58,9 @@ export function EnhancedChat({
   const [inputText, setInputText] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [lastDisclaimer, setLastDisclaimer] = useState<string | null>(null);
-  const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [attachments, setAttachments] = useState<File[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const recognitionRef = useRef<any>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -73,54 +69,6 @@ export function EnhancedChat({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-
-  // Initialize speech recognition
-  useEffect(() => {
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-
-      recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText(prev => prev + ' ' + transcript);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = () => {
-        setIsListening(false);
-        toast({
-          title: "Voice input error",
-          description: "Could not recognize speech. Please try again.",
-          variant: "destructive",
-        });
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
-  }, [toast]);
-
-  const toggleVoiceInput = () => {
-    if (!recognitionRef.current) {
-      toast({
-        title: "Not supported",
-        description: "Voice input is not supported in your browser.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    } else {
-      recognitionRef.current.start();
-      setIsListening(true);
-    }
-  };
 
   const toggleTextToSpeech = (text: string) => {
     if (isSpeaking) {
@@ -134,15 +82,6 @@ export function EnhancedChat({
     }
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    setAttachments(prev => [...prev, ...files]);
-  };
-
-  const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
-  };
-
   const clearChat = () => {
     setMessages([{
       id: Date.now().toString(),
@@ -154,7 +93,7 @@ export function EnhancedChat({
   };
 
   const handleSendMessage = async () => {
-    if (!inputText.trim() && attachments.length === 0) return;
+    if (!inputText.trim()) return;
     if (isLoading) return;
 
     const userMessage: ChatMessage = {
@@ -165,18 +104,16 @@ export function EnhancedChat({
     };
 
     const messageToSend = inputText.trim();
-    const filesToSend = [...attachments];
     
     setMessages(prev => [...prev, userMessage]);
     setInputText('');
-    setAttachments([]);
     setIsLoading(true);
 
     try {
       // Get last 2 conversation pairs (4 messages) for context
       const recentMessages = messages.slice(-4);
       
-      const response = await onSendMessage(messageToSend, recentMessages, filesToSend);
+      const response = await onSendMessage(messageToSend, recentMessages);
 
       const botMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
@@ -344,23 +281,6 @@ export function EnhancedChat({
         {/* Enhanced Input Area - Fixed at bottom */}
         <div className="pb-6">
           <div className="bg-white/95 dark:bg-slate-900/95 rounded-2xl border border-slate-200/50 dark:border-slate-700/50 shadow-xl backdrop-blur-sm">
-            {/* Attachments Preview */}
-            {attachments.length > 0 && (
-              <div className="p-3 border-b border-slate-200 dark:border-slate-700">
-                <div className="flex flex-wrap gap-2">
-                  {attachments.map((file, index) => (
-                    <div key={index} className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-lg">
-                      <Paperclip className="w-3 h-3" />
-                      <span className="text-xs text-slate-700 dark:text-slate-300">{file.name}</span>
-                      <button onClick={() => removeAttachment(index)} className="text-slate-500 hover:text-slate-700">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
             <div className="p-4">
               <div className="flex gap-2 items-end">
                 <div className="flex-1">
@@ -375,35 +295,9 @@ export function EnhancedChat({
                   />
                 </div>
                 <div className="flex gap-1">
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileSelect}
-                    accept="image/*,.pdf,.doc,.docx"
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="rounded-full"
-                    data-testid="button-attachment"
-                  >
-                    <Paperclip className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={toggleVoiceInput}
-                    className={`rounded-full ${isListening ? 'bg-red-100 dark:bg-red-950' : ''}`}
-                    data-testid="button-voice"
-                  >
-                    {isListening ? <MicOff className="w-4 h-4 text-red-600" /> : <Mic className="w-4 h-4" />}
-                  </Button>
                   <Button
                     onClick={handleSendMessage}
-                    disabled={(!inputText.trim() && attachments.length === 0) || isLoading}
+                    disabled={!inputText.trim() || isLoading}
                     className={`rounded-full bg-gradient-to-r ${gradientFrom} ${gradientTo} hover:opacity-90`}
                     size="icon"
                     data-testid={sendButtonTestId}
