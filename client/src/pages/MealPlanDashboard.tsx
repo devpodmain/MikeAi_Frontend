@@ -440,7 +440,7 @@ export default function MealPlanDashboard() {
           if (!open && isSavingPreview) return;
           setPreviewModalOpen(open);
         }}>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto relative">
+          <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] z-[200]">
             {/* Loading Overlay for Saving */}
             {isSavingPreview && (
               <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
