@@ -606,8 +606,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Silent error handling
   }
   
-  // Workout Plans API routes
-  app.post('/api/workout-plans', requireAuth, async (req: any, res) => {
+  // Workout Plans API routes (protected - require active subscription for individual users)
+  app.post('/api/workout-plans', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -639,7 +639,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/workout-plans/preview', requireAuth, async (req: any, res) => {
+  app.post('/api/workout-plans/preview', requireAuth, requireActiveSubscription, async (req: any, res) => {
     // Disable timeouts for AI generation - these can take several minutes for larger plans
     req.setTimeout(0);
     res.setTimeout(0);
@@ -701,7 +701,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/workout-plans/:userId', requireAuth, async (req: any, res) => {
+  app.get('/api/workout-plans/:userId', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const { userId: requestedUserId } = req.params;
       const currentUserId = getUserId(req);
@@ -727,7 +727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete('/api/workout-plans/:userId', requireAuth, async (req: any, res) => {
+  app.delete('/api/workout-plans/:userId', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const { userId: requestedUserId } = req.params;
       const currentUserId = getUserId(req);
@@ -1234,6 +1234,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Reset password error:', error);
       res.status(500).json({ message: "Failed to reset password" });
+    }
+  });
+
+  // Contact form submission (public endpoint)
+  app.post('/api/contact', async (req: any, res) => {
+    try {
+      const { name, email, subject, message } = req.body;
+
+      if (!name || !email || !subject || !message) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: "Invalid email address" });
+      }
+
+      // Validate field lengths
+      if (name.length > 100) {
+        return res.status(400).json({ message: "Name is too long (max 100 characters)" });
+      }
+      if (subject.length > 200) {
+        return res.status(400).json({ message: "Subject is too long (max 200 characters)" });
+      }
+      if (message.length > 5000) {
+        return res.status(400).json({ message: "Message is too long (max 5000 characters)" });
+      }
+
+      const { sendContactFormEmail } = await import('./email');
+
+      const result = await sendContactFormEmail({
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
+        subject: subject.trim(),
+        message: message.trim(),
+      });
+
+      if (!result.success) {
+        console.error('Failed to send contact form email:', result.error);
+        return res.status(500).json({ message: "Failed to send message. Please try again." });
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Your message has been sent successfully. We'll get back to you soon!" 
+      });
+    } catch (error) {
+      console.error('Contact form error:', error);
+      res.status(500).json({ message: "Failed to send message. Please try again." });
     }
   });
 
@@ -3074,8 +3124,8 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  // Meal plan routes (basic auth for now)
-  app.get('/api/meal-plans', requireAuth, async (req: any, res) => {
+  // Meal plan routes (protected - require active subscription for individual users)
+  app.get('/api/meal-plans', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3089,7 +3139,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.get('/api/meal-plans/:id', requireAuth, async (req: any, res) => {
+  app.get('/api/meal-plans/:id', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const id = parseInt(req.params.id);
       const mealPlan = await storage.getMealPlan(id);
@@ -3107,7 +3157,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.post('/api/meal-plans', requireAuth, async (req: any, res) => {
+  app.post('/api/meal-plans', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3122,7 +3172,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.post('/api/meal-plans/preview', requireAuth, async (req: any, res) => {
+  app.post('/api/meal-plans/preview', requireAuth, requireActiveSubscription, async (req: any, res) => {
     // Disable timeouts for AI generation - these can take several minutes for larger plans
     req.setTimeout(0);
     res.setTimeout(0);
@@ -3186,7 +3236,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.delete('/api/meal-plans/:id', requireAuth, async (req: any, res) => {
+  app.delete('/api/meal-plans/:id', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3211,7 +3261,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.delete('/api/meal-plans', requireAuth, async (req: any, res) => {
+  app.delete('/api/meal-plans', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3228,7 +3278,7 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // Get today's meal plan items with cycling logic
-  app.get('/api/meal-plans/today', requireAuth, async (req: any, res) => {
+  app.get('/api/meal-plans/today', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3286,7 +3336,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.post('/api/meal-plans/current/items', requireAuth, async (req: any, res) => {
+  app.post('/api/meal-plans/current/items', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3324,7 +3374,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.post('/api/meal-plans/:id/items', requireAuth, async (req: any, res) => {
+  app.post('/api/meal-plans/:id/items', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const mealPlanId = parseInt(req.params.id);
       
@@ -4111,8 +4161,8 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  // AI meal plan generation (mock implementation)
-  app.post('/api/ai/meal-plan', requireAuth, async (req: any, res) => {
+  // AI meal plan generation (protected - require active subscription)
+  app.post('/api/ai/meal-plan', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -4200,6 +4250,54 @@ Always prioritize health, safety, and sustainable practices.`;
       }
     } catch (error) {
       res.status(500).json({ message: "Failed to generate AI meal plan" });
+    }
+  });
+
+  // AI Fitness Chat Proxy (protected - require active subscription)
+  app.post('/api/ai/fitness/chat', requireAuth, requireActiveSubscription, async (req: any, res) => {
+    try {
+      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi';
+      
+      const response = await fetch(`${AI_BACKEND}/ai/fitness/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'AI service unavailable' }));
+        return res.status(response.status).json(errorData);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('AI fitness chat proxy error:', error);
+      res.status(500).json({ message: "Failed to connect to AI service" });
+    }
+  });
+
+  // AI Supplements Suggest Proxy (protected - require active subscription)
+  app.post('/api/ai/supplements/suggest', requireAuth, requireActiveSubscription, async (req: any, res) => {
+    try {
+      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi';
+      
+      const response = await fetch(`${AI_BACKEND}/ai/supplements/suggest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(req.body),
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'AI service unavailable' }));
+        return res.status(response.status).json(errorData);
+      }
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error) {
+      console.error('AI supplements proxy error:', error);
+      res.status(500).json({ message: "Failed to connect to AI service" });
     }
   });
 
@@ -4590,7 +4688,7 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // Workout routes
-  app.post('/api/workouts/ai', requireAuth, async (req: any, res) => {
+  app.post('/api/workouts/ai', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -4685,7 +4783,7 @@ Always prioritize health, safety, and sustainable practices.`;
     }
   });
 
-  app.get('/api/workouts', requireAuth, async (req: any, res) => {
+  app.get('/api/workouts', requireAuth, requireActiveSubscription, async (req: any, res) => {
     try {
       const userId = getUserId(req);
       if (!userId) {

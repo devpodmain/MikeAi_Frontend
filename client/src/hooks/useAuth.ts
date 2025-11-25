@@ -13,6 +13,8 @@ export interface AuthUser extends User {
   organizationLogo?: string;
   role?: 'coach' | 'client';
   hasPersonalPassword?: boolean;
+  trialExpired?: boolean;
+  trialDaysRemaining?: number;
 }
 
 export function useAuth() {

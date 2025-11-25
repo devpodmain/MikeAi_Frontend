@@ -1,7 +1,9 @@
 import { Link } from 'wouter';
-import { Brain, Pill, UtensilsCrossed, Dumbbell, Sparkles, Lock } from 'lucide-react';
+import { Brain, Pill, UtensilsCrossed, Dumbbell, Sparkles, Lock, Loader2 } from 'lucide-react';
 import Navigation from '@/components/navigation';
 import { useAuth } from '@/hooks/useAuth';
+import { useTrialGuard } from '@/hooks/useTrialGuard';
+import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
 import { Badge } from '@/components/ui/badge';
 import { useQuery } from '@tanstack/react-query';
 
@@ -10,9 +12,21 @@ interface Payment {
   expiresAt: string;
 }
 
-
 export default function AIHub() {
   const { user } = useAuth();
+  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  
+  if (trialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  
+  if (isTrialExpired && !canAccessPremium) {
+    return <TrialExpiredLockout featureName="AI Hub" />;
+  }
   
   // Check if user has active purchase (not expired)
   const { data: activePayment } = useQuery<Payment>({

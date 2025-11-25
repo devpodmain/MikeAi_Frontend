@@ -1,11 +1,16 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { 
   ArrowRight, Users, Sparkles, Brain, Apple, Dumbbell,
   Sun, Coffee, Target, TrendingUp, Heart, Award,
   CheckCircle, Lock, Shield, Play, Zap, BarChart3,
-  Moon, MessageCircle
+  Moon, MessageCircle, Mail, Send, Loader2
 } from "lucide-react";
 import { AnimatedPage } from "@/components/ui/animated-page";
 import { motion, useInView } from "framer-motion";
@@ -42,6 +47,167 @@ function Section({ children, className = "" }: { children: React.ReactNode; clas
     >
       {children}
     </motion.div>
+  );
+}
+
+// Contact Form Section Component
+function ContactFormSection() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [subject, setSubject] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const ref = useRef(null);
+  const isInView = useInView(ref, { once: true, margin: "-100px" });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!name.trim() || !email.trim() || !subject.trim() || !message.trim()) {
+      toast({
+        title: "Missing Fields",
+        description: "Please fill in all fields before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to send message');
+      }
+
+      toast({
+        title: "Message Sent!",
+        description: "Thank you for reaching out. We'll get back to you soon.",
+      });
+
+      setName("");
+      setEmail("");
+      setSubject("");
+      setMessage("");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to send message. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <section id="contact" className="py-20 px-4 bg-gradient-to-br from-gray-50 to-white">
+      <div className="container mx-auto max-w-4xl">
+        <motion.div
+          ref={ref}
+          initial={{ opacity: 0, y: 30 }}
+          animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+        >
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-gradient-to-r from-primary/10 to-blue-600/10 text-primary border-primary/20 px-4 py-2">
+              <Mail className="w-4 h-4 mr-2 inline" />
+              Get In Touch
+            </Badge>
+            <h2 className="text-3xl md:text-5xl font-bold text-gray-900 mb-4">
+              Contact Us
+            </h2>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Have questions about MikeAI? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </p>
+          </div>
+
+          <Card className="p-8 shadow-xl border-gray-100">
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label htmlFor="contact-name" className="text-gray-700 font-medium">Name</Label>
+                  <Input
+                    id="contact-name"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Your name"
+                    className="border-gray-200 focus:border-primary focus:ring-primary"
+                    disabled={isSubmitting}
+                    data-testid="input-contact-name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact-email" className="text-gray-700 font-medium">Email</Label>
+                  <Input
+                    id="contact-email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="border-gray-200 focus:border-primary focus:ring-primary"
+                    disabled={isSubmitting}
+                    data-testid="input-contact-email"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact-subject" className="text-gray-700 font-medium">Subject</Label>
+                <Input
+                  id="contact-subject"
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="What is this about?"
+                  className="border-gray-200 focus:border-primary focus:ring-primary"
+                  disabled={isSubmitting}
+                  data-testid="input-contact-subject"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contact-message" className="text-gray-700 font-medium">Message</Label>
+                <Textarea
+                  id="contact-message"
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Tell us more about your inquiry..."
+                  className="border-gray-200 focus:border-primary focus:ring-primary min-h-[150px] resize-none"
+                  disabled={isSubmitting}
+                  data-testid="input-contact-message"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full bg-gradient-to-r from-primary to-blue-600 text-white py-6 text-lg font-semibold hover:opacity-90 transition-opacity"
+                data-testid="button-contact-submit"
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-5 h-5 mr-2" />
+                    Send Message
+                  </>
+                )}
+              </Button>
+            </form>
+          </Card>
+        </motion.div>
+      </div>
+    </section>
   );
 }
 
@@ -307,6 +473,7 @@ export default function Landing() {
         </div>
       </section>
 
+
       {/* FINAL CTA */}
       <section className="py-24 px-4 bg-gradient-to-br from-primary via-blue-600 to-purple-600 text-white">
         <div className="container mx-auto max-w-4xl text-center">
@@ -321,7 +488,7 @@ export default function Landing() {
             </h2>
 
             <p className="text-xl md:text-2xl mb-10 text-blue-100">
-              Start your free trial today. No credit card required.
+              Start your free 7-day trial today. No credit card required.
             </p>
 
             <Button
@@ -336,7 +503,7 @@ export default function Landing() {
             <div className="flex flex-wrap gap-6 justify-center mt-10 text-blue-100">
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
-                <span>Free Trial</span>
+                <span>7-Day Free Trial</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle className="w-5 h-5" />
@@ -351,10 +518,13 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* CONTACT FORM SECTION */}
+      <ContactFormSection />
+
       {/* FOOTER */}
       <footer className="bg-gray-900 text-gray-400 py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-8">
+          <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <img src={logoImage} alt="Logo" className="w-8 h-8 rounded-full" />
@@ -368,8 +538,7 @@ export default function Landing() {
             <div>
               <h4 className="font-semibold text-white mb-4">Company</h4>
               <ul className="space-y-2 text-sm">
-                <li><a href="/terms" className="hover:text-white transition-colors">Terms</a></li>
-                <li><a href="/terms" className="hover:text-white transition-colors">Privacy</a></li>
+                <li><a href="/terms" className="hover:text-white transition-colors">Terms & Privacy</a></li>
               </ul>
             </div>
           </div>

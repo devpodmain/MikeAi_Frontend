@@ -30,12 +30,27 @@ import {
 import { MealDay } from '@/components/MealDay';
 import { useMealPlan } from '@/hooks/useMealPlan';
 import { useAuth } from '@/hooks/useAuth';
+import { useTrialGuard } from '@/hooks/useTrialGuard';
 import { ProfileCompletionAlert } from '@/components/ProfileCompletionAlert';
+import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
 import { generatePlanPreview, getUserProfile, persistPlan } from '@/lib/mealPlanApi';
 import { queryClient } from '@/lib/queryClient';
 
 export default function MealPlanDashboard() {
   const { user } = useAuth();
+  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  
+  if (trialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  
+  if (isTrialExpired && !canAccessPremium) {
+    return <TrialExpiredLockout featureName="AI Meal Plans" />;
+  }
   const [selectedDays, setSelectedDays] = useState<7 | 14>(7);
   const [selectedMeals, setSelectedMeals] = useState<3 | 5>(5);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);

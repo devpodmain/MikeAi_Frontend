@@ -361,3 +361,91 @@ export async function sendCommonPasswordChangedEmail({
     return { success: false, error };
   }
 }
+
+export interface ContactFormEmailParams {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+const CONTACT_FORM_RECIPIENT = 'nkrvivek@gmail.com';
+
+export async function sendContactFormEmail({
+  name,
+  email,
+  subject,
+  message,
+}: ContactFormEmailParams) {
+  try {
+    const { data, error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to: CONTACT_FORM_RECIPIENT,
+      replyTo: email,
+      subject: `[MikeAI Contact Form] ${subject}`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <style>
+            body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .header h1 { color: white; margin: 0; font-size: 24px; }
+            .content { background: white; padding: 30px; border: 1px solid #e5e7eb; border-top: none; }
+            .info-row { margin: 15px 0; padding: 12px 15px; background: #f9fafb; border-radius: 6px; border-left: 3px solid #f97316; }
+            .info-label { font-weight: 600; color: #4b5563; font-size: 12px; text-transform: uppercase; margin-bottom: 4px; }
+            .info-value { color: #111827; }
+            .message-box { margin-top: 20px; padding: 20px; background: #f3f4f6; border-radius: 6px; }
+            .message-label { font-weight: 600; color: #4b5563; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
+            .message-content { white-space: pre-wrap; color: #111827; }
+            .footer { text-align: center; padding: 20px; color: #6b7280; font-size: 13px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>📬 New Contact Form Submission</h1>
+            </div>
+            <div class="content">
+              <div class="info-row">
+                <div class="info-label">From</div>
+                <div class="info-value">${name}</div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Email</div>
+                <div class="info-value"><a href="mailto:${email}">${email}</a></div>
+              </div>
+              <div class="info-row">
+                <div class="info-label">Subject</div>
+                <div class="info-value">${subject}</div>
+              </div>
+              <div class="message-box">
+                <div class="message-label">Message</div>
+                <div class="message-content">${message.replace(/\n/g, '<br>')}</div>
+              </div>
+            </div>
+            <div class="footer">
+              <p>This message was sent from the MikeAI contact form.</p>
+              <p>Reply directly to this email to respond to ${name}.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error('❌ Error sending contact form email:', error);
+      return { success: false, error };
+    }
+
+    console.log('✅ Contact form email sent successfully - Message ID:', data?.id);
+    return { success: true, data };
+  } catch (error) {
+    console.error('❌ Exception sending contact form email:', error);
+    return { success: false, error };
+  }
+}

@@ -355,9 +355,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
-    // Set trial end date for new users (10 days from now)
+    // Set trial end date for new users (7 days from now)
     const trialEndsAt = new Date();
-    trialEndsAt.setDate(trialEndsAt.getDate() + 10);
+    trialEndsAt.setDate(trialEndsAt.getDate() + 7);
     
     const [user] = await db
       .insert(users)

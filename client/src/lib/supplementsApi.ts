@@ -1,5 +1,3 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://mikeai.co/fastapi";
-
 class SupplementsApiError extends Error {
   constructor(
     message: string,
@@ -13,6 +11,7 @@ class SupplementsApiError extends Error {
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -88,13 +87,12 @@ export async function getSupplementSuggestions(
   };
 
   console.log("=== CALLING SUPPLEMENTS API ===");
-  console.log("API_BASE:", API_BASE);
-  console.log("Full URL:", `${API_BASE}/ai/supplements/suggest`);
+  console.log("Full URL:", `/api/ai/supplements/suggest`);
   console.log("Request Body:", JSON.stringify(requestBody, null, 2));
 
   try {
     const data = await fetchWithErrorHandling(
-      `${API_BASE}/ai/supplements/suggest`,
+      `/api/ai/supplements/suggest`,
       {
         method: "POST",
         body: JSON.stringify(requestBody),

@@ -28,7 +28,9 @@ import {
 import { AnimatedCard } from '@/components/ui/animated-card';
 import { AnimatedButton } from '@/components/ui/animated-button';
 import { useAuth } from "@/hooks/useAuth";
+import { useTrialGuard } from "@/hooks/useTrialGuard";
 import { ProfileCompletionAlert } from '@/components/ProfileCompletionAlert';
+import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
 import { queryClient } from '@/lib/queryClient';
 
 const EQUIP_HOME = ["bodyweight","dumbbell","bands","kettlebell"];
@@ -36,6 +38,19 @@ const EQUIP_GYM  = ["barbell","dumbbell","machine","cable","kettlebell","bodywei
 
 export default function WorkoutsPage() {
   const { user } = useAuth();
+  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  
+  if (trialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  
+  if (isTrialExpired && !canAccessPremium) {
+    return <TrialExpiredLockout featureName="AI Workout Plans" />;
+  }
   const [userId, setUserId] = useState<string>("");
   const [profile, setProfile] = useState<any>(null);
 

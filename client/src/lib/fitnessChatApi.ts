@@ -1,5 +1,3 @@
-const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "https://mikeai.co/fastapi";
-
 class FitnessChatApiError extends Error {
   constructor(
     message: string,
@@ -13,6 +11,7 @@ class FitnessChatApiError extends Error {
 async function fetchWithErrorHandling(url: string, options: RequestInit = {}) {
   const response = await fetch(url, {
     ...options,
+    credentials: 'include',
     headers: {
       "Content-Type": "application/json",
       ...options.headers,
@@ -72,12 +71,11 @@ export async function sendFitnessChat(
   };
 
   console.log("=== CALLING FITNESS CHAT API ===");
-  console.log("API_BASE:", API_BASE);
-  console.log("Full URL:", `${API_BASE}/ai/fitness/chat`);
+  console.log("Full URL:", `/api/ai/fitness/chat`);
   console.log("Request Body:", JSON.stringify(requestBody, null, 2));
 
   try {
-    const data = await fetchWithErrorHandling(`${API_BASE}/ai/fitness/chat`, {
+    const data = await fetchWithErrorHandling(`/api/ai/fitness/chat`, {
       method: "POST",
       body: JSON.stringify(requestBody),
     });

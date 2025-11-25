@@ -1,15 +1,30 @@
 import { useState, useEffect } from 'react';
-import { Pill, AlertTriangle, Info } from 'lucide-react';
+import { Pill, AlertTriangle, Info, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
+import { useTrialGuard } from '@/hooks/useTrialGuard';
+import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
 import { useToast } from '@/hooks/use-toast';
 import { EnhancedChat, type ChatMessage } from '@/components/enhanced-chat';
 import { getSupplementSuggestions } from '@/lib/supplementsApi';
 
 export default function SupplementsSuggest() {
   const { user } = useAuth();
+  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  
+  if (trialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  
+  if (isTrialExpired && !canAccessPremium) {
+    return <TrialExpiredLockout featureName="Supplements AI" />;
+  }
   const { toast } = useToast();
   const [showTCModal, setShowTCModal] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);

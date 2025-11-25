@@ -10,8 +10,23 @@ import { generateRecipe, type RecipeData } from "@/lib/recipesApi";
 import { useToast } from "@/hooks/use-toast";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { useTrialGuard } from "@/hooks/useTrialGuard";
+import { TrialExpiredLockout } from "@/components/trial-expired-lockout";
 
 export default function Recipes() {
+  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  
+  if (trialLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+      </div>
+    );
+  }
+  
+  if (isTrialExpired && !canAccessPremium) {
+    return <TrialExpiredLockout featureName="AI Recipe Generator" />;
+  }
   const [dishName, setDishName] = useState("");
   const [servings, setServings] = useState<number>(4);
   const [cuisine, setCuisine] = useState("");
