@@ -115,16 +115,16 @@ export interface IStorage {
     subscriptionStatus?: "trial" | "active" | "canceled" | "past_due" | "unpaid" | "incomplete";
     subscriptionTier?: "free" | "plus" | "pro";
   }): Promise<User>;
-
+  
   // User profile operations
   getUserProfile(userId: string): Promise<UserProfile | undefined>;
   createUserProfile(profile: InsertUserProfile): Promise<UserProfile>;
   updateUserProfile(userId: string, profile: Partial<InsertUserProfile>): Promise<UserProfile>;
-
+  
   // User preferences operations
   getUserPreferences(userId: string): Promise<UserPreferences | undefined>;
   upsertUserPreferences(prefs: InsertUserPreferences): Promise<UserPreferences>;
-
+  
   // Recipe operations
   getRecipes(filters?: {
     cuisine?: string;
@@ -136,7 +136,7 @@ export interface IStorage {
   }): Promise<Recipe[]>;
   getRecipe(id: number): Promise<Recipe | undefined>;
   createRecipe(recipe: InsertRecipe): Promise<Recipe>;
-
+  
   // Meal plan operations
   getMealPlans(userId: string): Promise<MealPlan[]>;
   getMealPlan(id: number): Promise<MealPlan | undefined>;
@@ -145,13 +145,13 @@ export interface IStorage {
   addMealPlanItem(item: InsertMealPlanItem): Promise<MealPlanItem>;
   deleteMealPlan(userId: string, mealPlanId: number): Promise<void>;
   deleteAllMealPlans(userId: string): Promise<void>;
-
+  
   // Meal logging operations
   getMealLogs(userId: string, date?: string): Promise<(MealLog & { recipe?: Recipe })[]>;
   createMealLog(log: InsertMealLog): Promise<MealLog>;
   deleteMealLog(logId: number, userId: string): Promise<void>;
   deleteMealLogByTypeAndDate(userId: string, mealType: string, date: string): Promise<number>;
-
+  
   // Habit operations
   getHabits(userId: string): Promise<Habit[]>;
   createHabit(habit: InsertHabit): Promise<Habit>;
@@ -160,28 +160,28 @@ export interface IStorage {
   createHabitLog(log: InsertHabitLog): Promise<HabitLog>;
   deleteHabitLog(userId: string, habitId: number, logDate: string): Promise<void>;
   getHabitStreak(userId: string, habitId: number): Promise<number>;
-
+  
   // Water logging operations
   getTodayWaterIntake(userId: string, date: string): Promise<number>;
   logWaterIntake(log: InsertWaterLog): Promise<WaterLog>;
   resetTodayWaterIntake(userId: string, date: string): Promise<void>;
-
+  
   // Coach-client operations
   getCoachClients(coachId: string): Promise<(CoachClient & { client: User & { profile?: UserProfile } })[]>;
   getClientCoaches(clientId: string): Promise<(CoachClient & { coach: User })[]>;
   createCoachClient(relation: InsertCoachClient): Promise<CoachClient>;
   updateCoachClientStatus(id: number, status: 'active' | 'inactive' | 'pending'): Promise<CoachClient>;
-
+  
   // Message operations
   getMessages(userId: string): Promise<(Message & { sender: User; receiver: User })[]>;
   createMessage(message: InsertMessage): Promise<Message>;
   markMessageAsRead(id: number): Promise<Message>;
-
+  
   // Community operations
   getCommunityPosts(limit?: number, offset?: number): Promise<(CommunityPost & { user: User })[]>;
   createCommunityPost(post: InsertCommunityPost): Promise<CommunityPost>;
   togglePostLike(postId: number, userId: string): Promise<{ liked: boolean }>;
-
+  
   // Comment operations
   createComment(comment: InsertPostComment): Promise<PostComment>;
   getPostComments(postId: number): Promise<(PostComment & { user: User; replies?: any[] })[]>;
@@ -193,13 +193,13 @@ export interface IStorage {
   createWorkout(workout: InsertWorkout): Promise<Workout>;
   updateWorkout(id: number, workout: Partial<InsertWorkout>): Promise<Workout>;
   deleteWorkout(id: number): Promise<void>;
-
+  
   // Exercise operations
   getExercises(): Promise<Exercise[]>;
   getExercise(id: number): Promise<Exercise | undefined>;
   getExerciseByName(name: string): Promise<Exercise | undefined>;
   createExercise(exercise: InsertExercise): Promise<Exercise>;
-
+  
   // Workout item operations
   getWorkoutItems(workoutId: number): Promise<WorkoutItem[]>;
   getWorkoutItemsWithExercises(workoutId: number): Promise<(WorkoutItem & { exerciseName: string; equipment?: string })[]>;
@@ -214,12 +214,12 @@ export interface IStorage {
   updateOrganization(id: number, org: Partial<InsertOrganization>): Promise<Organization>;
   softDeleteOrganization(id: number): Promise<Organization>;
   getUserOrganizations(userId: string): Promise<Organization[]>;
-
+  
   // Organization subscription operations
   createOrganizationSubscription(subscription: InsertOrganizationSubscription): Promise<OrganizationSubscription>;
   getOrganizationSubscription(orgId: number): Promise<OrganizationSubscription | undefined>;
   updateOrganizationSubscription(orgId: number, updates: Partial<InsertOrganizationSubscription>): Promise<OrganizationSubscription>;
-
+  
   // Organization billing period operations
   createBillingPeriod(period: InsertOrganizationBillingPeriod): Promise<OrganizationBillingPeriod>;
   getActiveBillingPeriod(orgId: number): Promise<OrganizationBillingPeriod | undefined>;
@@ -227,7 +227,7 @@ export interface IStorage {
   updateBillingPeriod(periodId: number, updates: Partial<InsertOrganizationBillingPeriod>): Promise<OrganizationBillingPeriod>;
   getBillingPeriodByCheckoutSession(sessionId: string): Promise<OrganizationBillingPeriod | undefined>;
   checkAndUpdateExpiredPeriods(orgId: number): Promise<void>;
-
+  
   // Organization member entitlement operations
   createMemberEntitlement(entitlement: InsertOrgMemberEntitlement): Promise<OrgMemberEntitlement>;
   getMemberEntitlement(orgId: number, memberId: string): Promise<OrgMemberEntitlement | undefined>;
@@ -236,20 +236,20 @@ export interface IStorage {
   lockMembersByCapacity(orgId: number, role: 'coach' | 'client', keepActiveCount: number): Promise<void>;
   getOrgsWhereUserIsCoach(userId: string): Promise<any[]>;
   getOrgsWhereUserIsClient(userId: string): Promise<any[]>;
-
+  
   // Org coach operations
   addOrgCoach(coach: InsertOrgCoach): Promise<OrgCoach>;
   getOrgCoaches(orgId: number): Promise<(OrgCoach & { user: User })[]>;
   removeOrgCoach(orgId: number, userId: string): Promise<void>;
   getOrgCoachCount(orgId: number): Promise<number>;
-
+  
   // Org client operations
   addOrgClient(client: InsertOrgClient): Promise<OrgClient>;
   getOrgClients(orgId: number): Promise<(OrgClient & { user: User; coach?: User })[]>;
   assignClientCoach(orgId: number, clientId: string, coachId: string | null): Promise<OrgClient>;
   removeOrgClient(orgId: number, clientId: string): Promise<void>;
   getOrgClientCount(orgId: number): Promise<number>;
-
+  
   // Org user operations (email-based org members)
   createOrgUser(orgUser: InsertOrgUser): Promise<OrgUser>;
   getOrgUser(id: number): Promise<OrgUser | undefined>;
@@ -259,29 +259,29 @@ export interface IStorage {
   updateOrgUser(id: number, updates: Partial<InsertOrgUser>): Promise<OrgUser>;
   removeOrgUser(id: number): Promise<void>;
   ensureOrgUserActive(orgId: number, email: string, role: 'coach' | 'client', firstName?: string, lastName?: string): Promise<{ success: boolean; user?: OrgUser; error?: string; errorCode?: string }>;
-
+  
   // Org member activation management operations
   swapMemberActivation(orgId: number, activateMemberId: number, deactivateMemberId: number, changedBy: string): Promise<{ success: boolean; message: string }>;
   canSwapInCurrentPeriod(orgId: number, role: 'coach' | 'client', billingPeriodId: number): Promise<{ canSwap: boolean; reason?: string }>;
   logActivationEvent(event: InsertOrgMemberActivationEvent): Promise<OrgMemberActivationEvent>;
   getActivationEvents(orgId: number, billingPeriodId?: number): Promise<OrgMemberActivationEvent[]>;
-
+  
   // Org meal plan operations
   createOrgMealPlan(plan: InsertOrgMealPlan): Promise<OrgMealPlan>;
   getOrgMealPlans(orgId: number): Promise<OrgMealPlan[]>;
   getOrgMealPlansWithCounts(orgId: number): Promise<any[]>;
   deleteOrgMealPlan(planId: number): Promise<void>;
-
+  
   // Org workout plan operations
   createOrgWorkoutPlan(plan: InsertOrgWorkoutPlan): Promise<OrgWorkoutPlan>;
   getOrgWorkoutPlans(orgId: number): Promise<OrgWorkoutPlan[]>;
   getOrgWorkoutPlansWithCounts(orgId: number): Promise<any[]>;
   deleteOrgWorkoutPlan(planId: number): Promise<void>;
-
+  
   // Plan assignment operations
   assignPlanToClients(assignment: InsertPlanAssignment[]): Promise<PlanAssignment[]>;
   getClientPlanAssignments(clientId: string): Promise<PlanAssignment[]>;
-
+  
   // Org message operations
   createOrgMessage(message: InsertOrgMessage): Promise<OrgMessage>;
   getOrgMessages(orgId: number, filters?: { messageType?: 'community' | 'dm'; limit?: number; offset?: number }): Promise<(OrgMessage & { sender: User; recipient?: User })[]>;
@@ -296,10 +296,10 @@ export interface IStorage {
   getDirectMessageThread(orgId: number, userId: string, participantId: string, userType: 'user' | 'org_member'): Promise<(OrgMessage & { sender: User; recipient?: User })[]>;
   markMessagesAsRead(messageIds: number[]): Promise<void>;
   getOrganizationMembers(orgId: number): Promise<Array<{ id: string; name: string; email: string; role: string; type: 'user' | 'org_member' }>>;
-
+  
   // User organization operations
   updateUserOrgSettings(userId: string, updates: { userType?: string; currentOrgId?: number | null }): Promise<User>;
-
+  
   // Organization analytics operations
   getMostActiveClients(orgId: number, limit?: number): Promise<Array<{
     clientId: string;
@@ -326,13 +326,13 @@ export interface IStorage {
     mealAdherence: number;
     workoutCompletion: number;
   }>;
-
+  
   // Payment operations
   createPayment(payment: InsertPayment): Promise<Payment>;
   getPayment(paymentIntentId: string): Promise<Payment | undefined>;
   getUserPayments(userId: string): Promise<Payment[]>;
   getUserActivePayment(userId: string): Promise<Payment | undefined>;
-
+  
   // User points operations
   getUserPoints(userId: string): Promise<UserPoints | undefined>;
   awardPoints(userId: string, points: number): Promise<UserPoints>;
@@ -358,7 +358,7 @@ export class DatabaseStorage implements IStorage {
     // Set trial end date for new users (10 days from now)
     const trialEndsAt = new Date();
     trialEndsAt.setDate(trialEndsAt.getDate() + 10);
-
+    
     const [user] = await db
       .insert(users)
       .values({
@@ -592,7 +592,7 @@ export class DatabaseStorage implements IStorage {
         eq(mealLogs.logDate, date)
       ))
       .returning();
-
+    
     return result.length; // Return number of deleted rows
   }
 
@@ -781,7 +781,7 @@ export class DatabaseStorage implements IStorage {
   async getCommunityPosts(limit = 20, offset = 0): Promise<(CommunityPost & { user: User })[]> {
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+    
     const result = await db
       .select({
         community_posts: communityPosts,
@@ -798,7 +798,7 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(communityPosts.createdAt))
       .limit(limit)
       .offset(offset);
-
+    
     // Transform the result to match the expected format
     return result.map(row => ({
       ...row.community_posts,
@@ -821,21 +821,21 @@ export class DatabaseStorage implements IStorage {
       await db
         .delete(communityPostLikes)
         .where(and(eq(communityPostLikes.postId, postId), eq(communityPostLikes.userId, userId)));
-
+      
       await db
         .update(communityPosts)
         .set({ likes: sql`${communityPosts.likes} - 1` })
         .where(eq(communityPosts.id, postId));
-
+      
       return { liked: false };
     } else {
       await db.insert(communityPostLikes).values({ postId, userId });
-
+      
       await db
         .update(communityPosts)
         .set({ likes: sql`${communityPosts.likes} + 1` })
         .where(eq(communityPosts.id, postId));
-
+      
       return { liked: true };
     }
   }
@@ -843,13 +843,13 @@ export class DatabaseStorage implements IStorage {
   // Comment operations
   async createComment(comment: InsertPostComment): Promise<PostComment> {
     const [newComment] = await db.insert(postComments).values(comment).returning();
-
+    
     // Increment comment count on the post
     await db
       .update(communityPosts)
       .set({ comments: sql`${communityPosts.comments} + 1` })
       .where(eq(communityPosts.id, comment.postId));
-
+    
     return newComment;
   }
 
@@ -863,21 +863,21 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(postComments.userId, users.id))
       .where(eq(postComments.postId, postId))
       .orderBy(postComments.createdAt);
-
+    
     const comments = result.map(row => ({
       ...row.comment,
       user: row.user,
       replies: []
     }));
-
+    
     // Build tree structure: organize comments with parentCommentId into nested replies
     const commentMap = new Map<number, any>();
     const topLevelComments: any[] = [];
-
+    
     comments.forEach(comment => {
       commentMap.set(comment.id, comment);
     });
-
+    
     comments.forEach(comment => {
       if (comment.parentCommentId) {
         const parent = commentMap.get(comment.parentCommentId);
@@ -888,7 +888,7 @@ export class DatabaseStorage implements IStorage {
         topLevelComments.push(comment);
       }
     });
-
+    
     return topLevelComments;
   }
 
@@ -902,21 +902,21 @@ export class DatabaseStorage implements IStorage {
       await db
         .delete(commentLikes)
         .where(and(eq(commentLikes.commentId, commentId), eq(commentLikes.userId, userId)));
-
+      
       await db
         .update(postComments)
         .set({ likes: sql`${postComments.likes} - 1` })
         .where(eq(postComments.id, commentId));
-
+      
       return { liked: false };
     } else {
       await db.insert(commentLikes).values({ commentId, userId });
-
+      
       await db
         .update(postComments)
         .set({ likes: sql`${postComments.likes} + 1` })
         .where(eq(postComments.id, commentId));
-
+      
       return { liked: true };
     }
   }
@@ -1047,7 +1047,7 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)` })
       .from(orgUsers)
       .where(and(
-        eq(orgUsers.organizationId, id),
+        eq(orgUsers.organizationId, id), 
         eq(orgUsers.role, 'coach'),
         eq(orgUsers.isActive, true),
         sql`${orgUsers.archivedAt} IS NULL`
@@ -1058,7 +1058,7 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)` })
       .from(orgUsers)
       .where(and(
-        eq(orgUsers.organizationId, id),
+        eq(orgUsers.organizationId, id), 
         eq(orgUsers.role, 'client'),
         eq(orgUsers.isActive, true),
         sql`${orgUsers.archivedAt} IS NULL`
@@ -1090,15 +1090,15 @@ export class DatabaseStorage implements IStorage {
       .select({ id: orgMealPlans.id })
       .from(orgMealPlans)
       .where(eq(orgMealPlans.orgId, id));
-
+    
     const orgWorkoutPlanIds = await db
       .select({ id: orgWorkoutPlans.id })
       .from(orgWorkoutPlans)
       .where(eq(orgWorkoutPlans.orgId, id));
-
+    
     const mealPlanIds = orgMealPlanIds.map(p => p.id);
     const workoutPlanIds = orgWorkoutPlanIds.map(p => p.id);
-
+    
     // Delete plan assignments for org meal plans
     if (mealPlanIds.length > 0) {
       await db
@@ -1110,7 +1110,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
-
+    
     // Delete plan assignments for org workout plans
     if (workoutPlanIds.length > 0) {
       await db
@@ -1122,7 +1122,7 @@ export class DatabaseStorage implements IStorage {
           )
         );
     }
-
+    
     // Delete all organization-related data in cascade order
     await db.delete(orgMessages).where(eq(orgMessages.orgId, id));
     await db.delete(orgMealPlans).where(eq(orgMealPlans.orgId, id));
@@ -1132,14 +1132,14 @@ export class DatabaseStorage implements IStorage {
     await db.delete(orgUsers).where(eq(orgUsers.organizationId, id));
     await db.delete(orgMemberEntitlements).where(eq(orgMemberEntitlements.organizationId, id));
     await db.delete(organizationBillingPeriods).where(eq(organizationBillingPeriods.organizationId, id));
-
+    
     // Finally, soft delete the organization itself
     const [deleted] = await db
       .update(organizations)
       .set({ isActive: false, updatedAt: new Date() })
       .where(eq(organizations.id, id))
       .returning();
-
+    
     return deleted;
   }
 
@@ -1243,25 +1243,28 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  // async getBillingPeriodByCheckoutSession(sessionId: string): Promise<OrganizationBillingPeriod | undefined> {
-  //   const [period] = await db
-  //     .select()
-  //     .from(organizationBillingPeriods)
-  //     .where(eq(organizationBillingPeriods.stripeCheckoutSessionId, sessionId));
-  //   return period;
-  // }
+  async getBillingPeriodByCheckoutSession(sessionId: string): Promise<OrganizationBillingPeriod | undefined> {
+    const [period] = await db
+      .select()
+      .from(organizationBillingPeriods)
+      .where(eq(organizationBillingPeriods.stripeCheckoutSessionId, sessionId));
+    return period;
+  }
 
   async checkAndUpdateExpiredPeriods(orgId: number): Promise<void> {
     const activePeriod = await this.getActiveBillingPeriod(orgId);
     if (!activePeriod) return;
-
+    
     // Enforce capacity limits before checking expiration (catches manual DB changes)
     await this.enforceCapacityLimits(orgId);
-
+    
     const now = new Date();
     if (now > activePeriod.currentPeriodEndsAt) {
+      console.log(`[Subscription Expiry] Organization ${orgId} billing period has expired. Locking all members.`);
+      
       await this.updateBillingPeriod(activePeriod.id, { status: 'expired' });
-
+      
+      // Update entitlements table
       await db.update(orgMemberEntitlements)
         .set({
           status: 'locked_expired',
@@ -1273,6 +1276,11 @@ export class DatabaseStorage implements IStorage {
           eq(orgMemberEntitlements.organizationId, orgId),
           eq(orgMemberEntitlements.status, 'active')
         ));
+      
+      // CRITICAL: Lock ALL members in orgUsers table when subscription expires
+      // After expiry, org reverts to FREE tier with 0 capacity, so ALL members must be locked
+      const lockResult = await this.autoLockExcessMembers(orgId, 0, 0, activePeriod.id);
+      console.log(`[Subscription Expiry] Locked ${lockResult.coachesLocked} coaches and ${lockResult.clientsLocked} clients for org ${orgId}`);
     }
   }
 
@@ -1346,7 +1354,7 @@ export class DatabaseStorage implements IStorage {
       .from(orgCoaches)
       .innerJoin(organizations, eq(orgCoaches.orgId, organizations.id))
       .where(and(eq(orgCoaches.userId, userId), eq(orgCoaches.isActive, true)));
-
+    
     return result;
   }
 
@@ -1358,7 +1366,7 @@ export class DatabaseStorage implements IStorage {
       .from(orgClients)
       .innerJoin(organizations, eq(orgClients.orgId, organizations.id))
       .where(and(eq(orgClients.userId, userId), eq(orgClients.isActive, true)));
-
+    
     return result;
   }
 
@@ -1390,7 +1398,7 @@ export class DatabaseStorage implements IStorage {
       .update(orgCoaches)
       .set({ isActive: false })
       .where(and(eq(orgCoaches.orgId, orgId), eq(orgCoaches.userId, userId)));
-
+    
     // Handle new table (org_users) - could be ID or email-based
     // Try as numeric ID first
     const numericId = parseInt(userId);
@@ -1399,7 +1407,7 @@ export class DatabaseStorage implements IStorage {
         .update(orgUsers)
         .set({ isActive: false })
         .where(and(
-          eq(orgUsers.organizationId, orgId),
+          eq(orgUsers.organizationId, orgId), 
           eq(orgUsers.id, numericId),
           eq(orgUsers.role, 'coach')
         ));
@@ -1409,7 +1417,7 @@ export class DatabaseStorage implements IStorage {
         .update(orgUsers)
         .set({ isActive: false })
         .where(and(
-          eq(orgUsers.organizationId, orgId),
+          eq(orgUsers.organizationId, orgId), 
           eq(orgUsers.email, userId),
           eq(orgUsers.role, 'coach')
         ));
@@ -1442,20 +1450,20 @@ export class DatabaseStorage implements IStorage {
     for (const row of results) {
       const client = row.org_clients;
       const user = row.users;
-
+      
       let coach = undefined;
       if (client.coachId) {
         const [coachData] = await db.select().from(users).where(eq(users.id, client.coachId));
         coach = coachData;
       }
-
+      
       clientsWithDetails.push({
         ...client,
         user,
         coach,
       });
     }
-
+    
     return clientsWithDetails;
   }
 
@@ -1474,7 +1482,7 @@ export class DatabaseStorage implements IStorage {
       .update(orgClients)
       .set({ isActive: false })
       .where(and(eq(orgClients.orgId, orgId), eq(orgClients.userId, clientId)));
-
+    
     // Handle new table (org_users) - could be ID or email-based
     // Try as numeric ID first
     const numericId = parseInt(clientId);
@@ -1483,7 +1491,7 @@ export class DatabaseStorage implements IStorage {
         .update(orgUsers)
         .set({ isActive: false })
         .where(and(
-          eq(orgUsers.organizationId, orgId),
+          eq(orgUsers.organizationId, orgId), 
           eq(orgUsers.id, numericId),
           eq(orgUsers.role, 'client')
         ));
@@ -1493,7 +1501,7 @@ export class DatabaseStorage implements IStorage {
         .update(orgUsers)
         .set({ isActive: false })
         .where(and(
-          eq(orgUsers.organizationId, orgId),
+          eq(orgUsers.organizationId, orgId), 
           eq(orgUsers.email, clientId),
           eq(orgUsers.role, 'client')
         ));
@@ -1525,7 +1533,7 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(orgUsers)
         .where(and(
-          eq(orgUsers.email, email),
+          eq(orgUsers.email, email), 
           eq(orgUsers.organizationId, orgId),
           eq(orgUsers.isActive, true)
         ));
@@ -1549,8 +1557,8 @@ export class DatabaseStorage implements IStorage {
         .select()
         .from(orgUsers)
         .where(and(
-          eq(orgUsers.organizationId, orgId),
-          eq(orgUsers.role, role),
+          eq(orgUsers.organizationId, orgId), 
+          eq(orgUsers.role, role), 
           eq(orgUsers.isActive, true),
           isNull(orgUsers.archivedAt)
         ))
@@ -1560,7 +1568,7 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(orgUsers)
       .where(and(
-        eq(orgUsers.organizationId, orgId),
+        eq(orgUsers.organizationId, orgId), 
         eq(orgUsers.isActive, true),
         isNull(orgUsers.archivedAt)
       ))
@@ -1569,7 +1577,7 @@ export class DatabaseStorage implements IStorage {
 
   async getOrgUsersWithMetrics(orgId: number, role?: 'coach' | 'client'): Promise<any[]> {
     const orgUsersList = await this.getOrgUsers(orgId, role);
-
+    
     const usersWithMetrics = await Promise.all(
       orgUsersList.map(async (orgUser) => {
         const assignments = await db
@@ -1581,22 +1589,22 @@ export class DatabaseStorage implements IStorage {
               eq(planAssignments.isActive, true)
             )
           );
-
+        
         const activePlans = assignments.length;
-        const lastActivity = assignments.length > 0
+        const lastActivity = assignments.length > 0 
           ? assignments.reduce((latest, a) => {
-            const assignedAt = new Date(a.assignedAt!);
-            return assignedAt > latest ? assignedAt : latest;
-          }, new Date(0))
+              const assignedAt = new Date(a.assignedAt!);
+              return assignedAt > latest ? assignedAt : latest;
+            }, new Date(0))
           : null;
-
+        
         // Calculate progress based on ACTUAL activity (last 7 days)
         // Activity weights: workouts=4pts, meals=2pts, habits=1pt, water=0.5pts
         let progress = 0;
         if (activePlans > 0) {
           const sevenDaysAgo = new Date();
           sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-
+          
           const [workoutCount, mealCount, habitCount, waterCount] = await Promise.all([
             db.select({ count: sql<number>`count(*)::int` })
               .from(workoutLogs)
@@ -1605,7 +1613,7 @@ export class DatabaseStorage implements IStorage {
                 gte(workoutLogs.completedAt, sevenDaysAgo)
               ))
               .then(r => r[0]?.count || 0),
-
+            
             db.select({ count: sql<number>`count(*)::int` })
               .from(mealLogs)
               .where(and(
@@ -1613,7 +1621,7 @@ export class DatabaseStorage implements IStorage {
                 gte(mealLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
               ))
               .then(r => r[0]?.count || 0),
-
+            
             db.select({ count: sql<number>`count(*)::int` })
               .from(habitLogs)
               .where(and(
@@ -1622,7 +1630,7 @@ export class DatabaseStorage implements IStorage {
                 gte(habitLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
               ))
               .then(r => r[0]?.count || 0),
-
+            
             db.select({ count: sql<number>`count(*)::int` })
               .from(waterLogs)
               .where(and(
@@ -1631,39 +1639,39 @@ export class DatabaseStorage implements IStorage {
               ))
               .then(r => r[0]?.count || 0),
           ]);
-
+          
           // Calculate weighted activity score
           const activityScore = (workoutCount * 4) + (mealCount * 2) + (habitCount * 1) + (waterCount * 0.5);
-
+          
           // Expected activity over 7 days: 3 workouts, 21 meals, 7 habits, 7 water logs
           // (3*4) + (21*2) + (7*1) + (7*0.5) = 12 + 42 + 7 + 3.5 = 64.5
           const expectedScore = 64.5;
-
+          
           // Convert to percentage (cap at 100%)
           progress = Math.min(100, Math.round((activityScore / expectedScore) * 100));
         }
-
+        
         // Get active meal plan and workout plan names
         const mealPlanAssignment = assignments.find(a => a.planType === 'meal');
         const workoutPlanAssignment = assignments.find(a => a.planType === 'workout');
-
+        
         let mealPlanName = null;
         let workoutPlanName = null;
-
+        
         if (mealPlanAssignment) {
-          const [mealPlan] = mealPlanAssignment.planId
+          const [mealPlan] = mealPlanAssignment.planId 
             ? await db.select().from(orgMealPlans).where(eq(orgMealPlans.id, parseInt(mealPlanAssignment.planId)))
             : [];
           mealPlanName = mealPlan?.name || null;
         }
-
+        
         if (workoutPlanAssignment) {
           const [workoutPlan] = workoutPlanAssignment.planId
             ? await db.select().from(orgWorkoutPlans).where(eq(orgWorkoutPlans.id, parseInt(workoutPlanAssignment.planId)))
             : [];
           workoutPlanName = workoutPlan?.name || null;
         }
-
+        
         return {
           ...orgUser,
           activePlans,
@@ -1674,7 +1682,7 @@ export class DatabaseStorage implements IStorage {
         };
       })
     );
-
+    
     return usersWithMetrics;
   }
 
@@ -1695,19 +1703,19 @@ export class DatabaseStorage implements IStorage {
     }
 
     const now = new Date();
-
+    
     // Soft delete: set archived_at only, keep status unchanged to preserve historical state
     await db
       .update(orgUsers)
-      .set({
+      .set({ 
         archivedAt: now,
-        isActive: false
+        isActive: false 
       })
       .where(eq(orgUsers.id, id));
 
     // Get current billing period for logging
     const activePeriod = await this.getActiveBillingPeriod(orgUser.organizationId);
-
+    
     // Emit deactivation event
     if (activePeriod) {
       await this.logActivationEvent({
@@ -1755,7 +1763,7 @@ export class DatabaseStorage implements IStorage {
     }
 
     // Archived member found - check if they can be reactivated
-
+    
     // Check for manual lock (only block if manually locked)
     if (archivedMember.status === 'locked_manual') {
       return {
@@ -1813,8 +1821,8 @@ export class DatabaseStorage implements IStorage {
     const activeCount = Number(activeCountResult?.count || 0);
 
     // Get tier limits from billing period
-    const baseAllowance = role === 'coach'
-      ? currentPeriod.baseCoachAllowance
+    const baseAllowance = role === 'coach' 
+      ? currentPeriod.baseCoachAllowance 
       : currentPeriod.baseClientAllowance;
     const addonQty = role === 'coach'
       ? currentPeriod.addonCoachQty
@@ -1861,9 +1869,9 @@ export class DatabaseStorage implements IStorage {
 
   // Org member activation management operations
   async swapMemberActivation(
-    orgId: number,
-    activateMemberId: number,
-    deactivateMemberId: number,
+    orgId: number, 
+    activateMemberId: number, 
+    deactivateMemberId: number, 
     changedBy: string
   ): Promise<{ success: boolean; message: string }> {
     // Prevent self-swap
@@ -1901,7 +1909,7 @@ export class DatabaseStorage implements IStorage {
     if (memberToActivate.status === 'active') {
       return { success: false, message: 'Member is already active' };
     }
-
+    
     if (memberToDeactivate.status !== 'active') {
       return { success: false, message: 'Can only deactivate currently active members' };
     }
@@ -1916,12 +1924,12 @@ export class DatabaseStorage implements IStorage {
     try {
       await db.transaction(async (tx) => {
         const now = new Date();
-
+        
         // Use PostgreSQL advisory lock to serialize swaps for this org/role/billing period
         // Lock key is hash of (orgId, role, billingPeriodId) to ensure uniqueness
         const lockId = (orgId * 1000000) + (memberToActivate.role === 'coach' ? 1 : 2) * 1000 + (activePeriod.id % 1000);
         const lockResult = await tx.execute(sql`SELECT pg_try_advisory_xact_lock(${lockId})`);
-
+        
         // @ts-ignore - pg_try_advisory_xact_lock returns a boolean
         if (!lockResult.rows[0]?.pg_try_advisory_xact_lock) {
           throw new Error('Another swap operation is in progress. Please try again.');
@@ -1933,13 +1941,13 @@ export class DatabaseStorage implements IStorage {
           .from(orgUsers)
           .where(eq(orgUsers.id, activateMemberId))
           .for('update');
-
+        
         const [freshMemberToDeactivate] = await tx
           .select()
           .from(orgUsers)
           .where(eq(orgUsers.id, deactivateMemberId))
           .for('update');
-
+        
         const [freshBillingPeriod] = await tx
           .select()
           .from(organizationBillingPeriods)
@@ -1969,7 +1977,7 @@ export class DatabaseStorage implements IStorage {
 
         // ANTI-EXPLOITATION CHECK 2: Verify swap budget remaining for this role
         const swapBudget = role === 'coach' ? freshBillingPeriod.swapBudgetCoach : freshBillingPeriod.swapBudgetClient;
-
+        
         if (swapBudget <= 0) {
           // Log rejection for audit trail
           await tx.insert(orgMemberActivationEvents).values({
@@ -2003,20 +2011,20 @@ export class DatabaseStorage implements IStorage {
             throw new Error(`${role === 'coach' ? 'Coach' : 'Client'} swap cooldown active. Please wait ${hoursRemaining} more hours before swapping again.`);
           }
         }
-
+        
         // Activate the locked member and mark as swapped in
         await tx.update(orgUsers)
-          .set({
+          .set({ 
             status: 'active',
             swappedInThisCycle: true, // Anti-exploitation: prevent re-swapping this member
             lastActivationChangeAt: now,
             lastActivationChangePeriodId: activePeriod.id,
           })
           .where(eq(orgUsers.id, activateMemberId));
-
+        
         // Deactivate the active member (keep swappedInThisCycle unchanged for tracking)
         await tx.update(orgUsers)
-          .set({
+          .set({ 
             status: 'locked_manual',
             lastActivationChangeAt: now,
             lastActivationChangePeriodId: activePeriod.id,
@@ -2098,11 +2106,11 @@ export class DatabaseStorage implements IStorage {
         .from(orgUsers)
         .where(eq(orgUsers.id, event.orgUserId))
         .limit(1);
-
+      
       if (member.length > 0 && member[0].role === role) {
-        return {
-          canSwap: false,
-          reason: `A ${role} swap has already been performed this billing cycle. You can only swap once per role per billing period.`
+        return { 
+          canSwap: false, 
+          reason: `A ${role} swap has already been performed this billing cycle. You can only swap once per role per billing period.` 
         };
       }
     }
@@ -2161,9 +2169,9 @@ export class DatabaseStorage implements IStorage {
       .where(
         billingPeriodId
           ? and(
-            eq(orgMemberActivationEvents.organizationId, orgId),
-            eq(orgMemberActivationEvents.billingPeriodId, billingPeriodId)
-          )
+              eq(orgMemberActivationEvents.organizationId, orgId),
+              eq(orgMemberActivationEvents.billingPeriodId, billingPeriodId)
+            )
           : eq(orgMemberActivationEvents.organizationId, orgId)
       )
       .orderBy(desc(orgMemberActivationEvents.changedAt));
@@ -2324,7 +2332,7 @@ export class DatabaseStorage implements IStorage {
       // Unlock coaches if there's available capacity
       if (activeCoachCount < coachQuota) {
         const availableSlots = coachQuota - activeCoachCount;
-
+        
         // Get locked_downgrade coaches ordered by when they were locked (earliest first)
         const lockedCoaches = await tx
           .select()
@@ -2368,7 +2376,7 @@ export class DatabaseStorage implements IStorage {
       // Unlock clients if there's available capacity
       if (activeClientCount < clientQuota) {
         const availableSlots = clientQuota - activeClientCount;
-
+        
         // Get locked_downgrade clients ordered by when they were locked (earliest first)
         const lockedClients = await tx
           .select()
@@ -2417,7 +2425,7 @@ export class DatabaseStorage implements IStorage {
   // This is called at key access points to catch manual DB changes or other edge cases
   async enforceCapacityLimits(orgId: number): Promise<{ enforced: boolean, coachesLocked: number, clientsLocked: number }> {
     const billingPeriod = await this.getActiveBillingPeriod(orgId);
-
+    
     if (!billingPeriod) {
       return { enforced: false, coachesLocked: 0, clientsLocked: 0 };
     }
@@ -2466,26 +2474,26 @@ export class DatabaseStorage implements IStorage {
 
     if (needsLocking) {
       console.log(`[CAPACITY ENFORCEMENT] Org ${orgId}: Active coaches ${activeCoachCount} > quota ${coachQuota} or active clients ${activeClientCount} > quota ${clientQuota}`);
-
+      
       const lockResult = await this.autoLockExcessMembers(orgId, coachQuota, clientQuota, billingPeriod.id);
       coachesLocked = lockResult.coachesLocked;
       clientsLocked = lockResult.clientsLocked;
-
+      
       console.log(`[CAPACITY ENFORCEMENT] Locked ${coachesLocked} coaches and ${clientsLocked} clients`);
     }
 
     // Check if unlocking is possible (under capacity with locked_downgrade members)
     // This runs even if no locking occurred, to handle member deletions
     const unlockResult = await this.autoUnlockWhenCapacityAvailable(orgId, coachQuota, clientQuota, billingPeriod.id);
-
+    
     if (unlockResult.coachesUnlocked > 0 || unlockResult.clientsUnlocked > 0) {
       console.log(`[CAPACITY ENFORCEMENT] Auto-unlocked ${unlockResult.coachesUnlocked} coaches and ${unlockResult.clientsUnlocked} clients`);
     }
 
-    return {
-      enforced: needsLocking || unlockResult.coachesUnlocked > 0 || unlockResult.clientsUnlocked > 0,
-      coachesLocked,
-      clientsLocked
+    return { 
+      enforced: needsLocking || unlockResult.coachesUnlocked > 0 || unlockResult.clientsUnlocked > 0, 
+      coachesLocked, 
+      clientsLocked 
     };
   }
 
@@ -2519,7 +2527,7 @@ export class DatabaseStorage implements IStorage {
 
   async getOrgMealPlansWithCounts(orgId: number): Promise<any[]> {
     const plans = await this.getOrgMealPlans(orgId);
-
+    
     const plansWithCounts = await Promise.all(
       plans.map(async (plan) => {
         const [{ count }] = await db
@@ -2532,20 +2540,20 @@ export class DatabaseStorage implements IStorage {
               eq(planAssignments.isActive, true)
             )
           );
-
+        
         return {
           ...plan,
           assignedCount: count || 0
         };
       })
     );
-
+    
     return plansWithCounts;
   }
 
   async getOrgWorkoutPlansWithCounts(orgId: number): Promise<any[]> {
     const plans = await this.getOrgWorkoutPlans(orgId);
-
+    
     const plansWithCounts = await Promise.all(
       plans.map(async (plan) => {
         const [{ count }] = await db
@@ -2558,14 +2566,14 @@ export class DatabaseStorage implements IStorage {
               eq(planAssignments.isActive, true)
             )
           );
-
+        
         return {
           ...plan,
           assignedCount: count || 0
         };
       })
     );
-
+    
     return plansWithCounts;
   }
 
@@ -2619,7 +2627,7 @@ export class DatabaseStorage implements IStorage {
   ): Promise<(OrgMessage & { sender: User; recipient?: User })[]> {
     // Build predicates array
     const predicates = [eq(orgMessages.orgId, orgId)];
-
+    
     if (filters?.messageType) {
       predicates.push(eq(orgMessages.messageType, filters.messageType));
     }
@@ -2645,7 +2653,7 @@ export class DatabaseStorage implements IStorage {
     const messagesWithSenders = await Promise.all(
       messages.map(async (message) => {
         let sender: User | undefined;
-
+        
         if (message.senderType === 'org_member') {
           // Fetch from organization_members
           const [member] = await db
@@ -2653,7 +2661,7 @@ export class DatabaseStorage implements IStorage {
             .from(orgUsers)
             .where(eq(orgUsers.id, parseInt(message.senderId)))
             .limit(1);
-
+          
           if (member) {
             // Convert org member to User shape for compatibility
             sender = {
@@ -2743,12 +2751,12 @@ export class DatabaseStorage implements IStorage {
       const isReceiver = dm.recipientId === userId && dm.recipientType === userType;
       const partnerId = isReceiver ? dm.senderId : dm.recipientId!;
       const partnerType = isReceiver ? dm.senderType : dm.recipientType!;
-
+      
       if (!conversationMap.has(partnerId)) {
         const unreadCount = dms.filter(
-          msg => msg.recipientId === userId &&
-            msg.senderId === partnerId &&
-            !msg.isRead
+          msg => msg.recipientId === userId && 
+                 msg.senderId === partnerId && 
+                 !msg.isRead
         ).length;
 
         conversationMap.set(partnerId, {
@@ -2765,7 +2773,7 @@ export class DatabaseStorage implements IStorage {
     const conversations = await Promise.all(
       Array.from(conversationMap.values()).map(async (conv) => {
         let participantName = 'Unknown';
-
+        
         try {
           if (conv.participantType === 'org_member') {
             const participantIdNum = parseInt(conv.participantId);
@@ -2841,14 +2849,14 @@ export class DatabaseStorage implements IStorage {
     const messagesWithSenders = await Promise.all(
       messages.map(async (message) => {
         let sender: User | undefined;
-
+        
         if (message.senderType === 'org_member') {
           const [member] = await db
             .select()
             .from(orgUsers)
             .where(eq(orgUsers.id, parseInt(message.senderId)))
             .limit(1);
-
+          
           if (member) {
             sender = {
               id: member.id.toString(),
@@ -2891,7 +2899,7 @@ export class DatabaseStorage implements IStorage {
 
   async markMessagesAsRead(messageIds: number[]): Promise<void> {
     if (messageIds.length === 0) return;
-
+    
     await db
       .update(orgMessages)
       .set({ isRead: true })
@@ -2916,7 +2924,7 @@ export class DatabaseStorage implements IStorage {
         .from(users)
         .where(eq(users.id, org.ownerId))
         .limit(1);
-
+      
       if (owner) {
         members.push({
           id: owner.id,
@@ -3085,7 +3093,7 @@ export class DatabaseStorage implements IStorage {
 
     // Get top 10 from current week to archive
     const topUsers = await this.getLeaderboard(10);
-
+    
     // Archive the weekly winners
     const archiveEntries: InsertWeeklyLeaderboard[] = topUsers.map((entry, index) => ({
       userId: entry.userId,
@@ -3179,7 +3187,7 @@ export class DatabaseStorage implements IStorage {
             gte(workoutLogs.completedAt, thirtyDaysAgo)
           ))
           .then(r => r[0]?.count || 0),
-
+        
         db.select({ count: sql<number>`count(*)::int` })
           .from(mealLogs)
           .where(and(
@@ -3187,7 +3195,7 @@ export class DatabaseStorage implements IStorage {
             gte(mealLogs.logDate, thirtyDaysAgo.toISOString().split('T')[0])
           ))
           .then(r => r[0]?.count || 0),
-
+        
         db.select({ count: sql<number>`count(*)::int` })
           .from(habitLogs)
           .where(and(
@@ -3196,7 +3204,7 @@ export class DatabaseStorage implements IStorage {
             gte(habitLogs.logDate, thirtyDaysAgo.toISOString().split('T')[0])
           ))
           .then(r => r[0]?.count || 0),
-
+        
         db.select({ count: sql<number>`count(*)::int` })
           .from(waterLogs)
           .where(and(
@@ -3300,7 +3308,7 @@ export class DatabaseStorage implements IStorage {
             eq(orgMealPlans.createdBy, coach.userId)
           ))
           .then(r => r[0]?.count || 0),
-
+        
         db.select({ count: sql<number>`count(*)::int` })
           .from(orgWorkoutPlans)
           .where(and(
@@ -3332,7 +3340,7 @@ export class DatabaseStorage implements IStorage {
               gte(workoutLogs.completedAt, sevenDaysAgo)
             ))
             .then(r => r[0]?.count || 0);
-
+          
           return hasActivity > 0 ? 1 : 0;
         }));
 
@@ -3387,7 +3395,7 @@ export class DatabaseStorage implements IStorage {
           gte(workoutLogs.completedAt, thirtyDaysAgo)
         ))
         .then(r => r[0]?.count || 0);
-
+      
       return totalLogs;
     }));
 
@@ -3468,7 +3476,7 @@ export class DatabaseStorage implements IStorage {
     let workoutCompletion = 0;
     if (workoutPlanClients.length > 0) {
       const workoutDaysCount = await db
-        .select({
+        .select({ 
           clientId: workoutLogs.clientId,
           logDate: sql<string>`DATE(${workoutLogs.completedAt})`,
         })
@@ -3492,6 +3500,364 @@ export class DatabaseStorage implements IStorage {
       mealAdherence,
       workoutCompletion,
     };
+  }
+
+  // Get 30-day activity trend for org owner dashboard
+  async getActivityTrend(orgId: number): Promise<Array<{
+    date: string;
+    workouts: number;
+    meals: number;
+    habits: number;
+    water: number;
+  }>> {
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    // Get all active clients for this org
+    const orgClientsResult = await db.execute<{ id: number }>(
+      sql`SELECT id FROM org_users 
+          WHERE organization_id = ${orgId}
+            AND role = 'client'
+            AND is_active = true
+            AND (status = 'active' OR status IS NULL)`
+    );
+    const clientIds = orgClientsResult.rows.map(r => r.id.toString());
+    
+    if (clientIds.length === 0) {
+      return [];
+    }
+    
+    // Generate array of last 30 days
+    const dates: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      dates.push(date.toISOString().split('T')[0]);
+    }
+    
+    // Get daily activity counts
+    const trend = await Promise.all(dates.map(async (date) => {
+      const [workouts, meals, habits, water] = await Promise.all([
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(workoutLogs)
+          .where(and(
+            sql`${workoutLogs.clientId} IN (${sql.join(clientIds.map(id => sql`${id}`), sql`, `)})`,
+            sql`DATE(${workoutLogs.completedAt}) = ${date}`
+          ))
+          .then(r => r[0]?.count || 0),
+        
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(mealLogs)
+          .where(and(
+            sql`${mealLogs.userId} IN (${sql.join(clientIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(mealLogs.logDate, date)
+          ))
+          .then(r => r[0]?.count || 0),
+        
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(habitLogs)
+          .where(and(
+            sql`${habitLogs.userId} IN (${sql.join(clientIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(habitLogs.completed, true),
+            eq(habitLogs.logDate, date)
+          ))
+          .then(r => r[0]?.count || 0),
+        
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(waterLogs)
+          .where(and(
+            sql`${waterLogs.userId} IN (${sql.join(clientIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(waterLogs.logDate, date)
+          ))
+          .then(r => r[0]?.count || 0),
+      ]);
+      
+      return { date, workouts, meals, habits, water };
+    }));
+    
+    return trend;
+  }
+
+  // Get team capacity info for org owner dashboard
+  async getTeamCapacity(orgId: number): Promise<{
+    coachesUsed: number;
+    coachesAllowed: number;
+    clientsUsed: number;
+    clientsAllowed: number;
+  }> {
+    // Get active billing period
+    const billingPeriod = await this.getActiveBillingPeriod(orgId);
+    
+    // Count active members
+    const coachesUsed = await db.execute<{ count: number }>(
+      sql`SELECT COUNT(*)::int as count FROM org_users 
+          WHERE organization_id = ${orgId}
+            AND role = 'coach'
+            AND is_active = true
+            AND (status = 'active' OR status IS NULL)`
+    ).then(r => r.rows[0]?.count || 0);
+    
+    const clientsUsed = await db.execute<{ count: number }>(
+      sql`SELECT COUNT(*)::int as count FROM org_users 
+          WHERE organization_id = ${orgId}
+            AND role = 'client'
+            AND is_active = true
+            AND (status = 'active' OR status IS NULL)`
+    ).then(r => r.rows[0]?.count || 0);
+    
+    const coachesAllowed = billingPeriod 
+      ? billingPeriod.baseCoachAllowance + billingPeriod.addonCoachQty 
+      : 0;
+    const clientsAllowed = billingPeriod 
+      ? billingPeriod.baseClientAllowance + billingPeriod.addonClientQty 
+      : 0;
+    
+    return {
+      coachesUsed,
+      coachesAllowed,
+      clientsUsed,
+      clientsAllowed,
+    };
+  }
+
+  // Get clients needing attention for coach dashboard
+  async getLowActivityClients(orgId: number, coachId?: string): Promise<Array<{
+    clientId: string;
+    name: string;
+    email: string;
+    progress: number;
+    lastActivityDays: number;
+    reason: string;
+  }>> {
+    // Get all active clients (optionally filtered by coach)
+    let clientsResult;
+    if (coachId) {
+      clientsResult = await db.execute<{
+        id: number;
+        email: string;
+        first_name: string | null;
+        last_name: string | null;
+      }>(
+        sql`SELECT id, email, first_name, last_name 
+            FROM org_users 
+            WHERE organization_id = ${orgId}
+              AND role = 'client'
+              AND is_active = true
+              AND (status = 'active' OR status IS NULL)
+              AND coach_id = ${coachId}`
+      );
+    } else {
+      clientsResult = await db.execute<{
+        id: number;
+        email: string;
+        first_name: string | null;
+        last_name: string | null;
+      }>(
+        sql`SELECT id, email, first_name, last_name 
+            FROM org_users 
+            WHERE organization_id = ${orgId}
+              AND role = 'client'
+              AND is_active = true
+              AND (status = 'active' OR status IS NULL)`
+      );
+    }
+    
+    const clients = clientsResult.rows.map(r => ({
+      id: r.id,
+      userId: r.id.toString(),
+      email: r.email,
+      firstName: r.first_name,
+      lastName: r.last_name,
+    }));
+    
+    if (clients.length === 0) {
+      return [];
+    }
+    
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    
+    // Calculate progress and activity for each client
+    const lowActivityClients = await Promise.all(
+      clients.map(async (client) => {
+        const [workoutCount, mealCount, habitCount, waterCount, lastWorkout, lastMeal] = await Promise.all([
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(workoutLogs)
+            .where(and(
+              eq(workoutLogs.clientId, client.userId),
+              gte(workoutLogs.completedAt, sevenDaysAgo)
+            ))
+            .then(r => r[0]?.count || 0),
+          
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(mealLogs)
+            .where(and(
+              eq(mealLogs.userId, client.userId),
+              gte(mealLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
+            ))
+            .then(r => r[0]?.count || 0),
+          
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(habitLogs)
+            .where(and(
+              eq(habitLogs.userId, client.userId),
+              eq(habitLogs.completed, true),
+              gte(habitLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
+            ))
+            .then(r => r[0]?.count || 0),
+          
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(waterLogs)
+            .where(and(
+              eq(waterLogs.userId, client.userId),
+              gte(waterLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
+            ))
+            .then(r => r[0]?.count || 0),
+          
+          db.select({ completedAt: workoutLogs.completedAt })
+            .from(workoutLogs)
+            .where(eq(workoutLogs.clientId, client.userId))
+            .orderBy(desc(workoutLogs.completedAt))
+            .limit(1)
+            .then(r => r[0]?.completedAt || null),
+          
+          db.select({ logDate: mealLogs.logDate })
+            .from(mealLogs)
+            .where(eq(mealLogs.userId, client.userId))
+            .orderBy(desc(mealLogs.logDate))
+            .limit(1)
+            .then(r => r[0]?.logDate || null),
+        ]);
+        
+        // Calculate progress
+        const activityScore = (workoutCount * 4) + (mealCount * 2) + (habitCount * 1) + (waterCount * 0.5);
+        const expectedScore = 64.5;
+        const progress = Math.min(100, Math.round((activityScore / expectedScore) * 100));
+        
+        // Calculate days since last activity
+        const lastActivity = lastWorkout || lastMeal;
+        const lastActivityDays = lastActivity 
+          ? Math.floor((Date.now() - new Date(lastActivity).getTime()) / (1000 * 60 * 60 * 24))
+          : 999;
+        
+        // Determine reason for low activity
+        let reason = '';
+        if (progress < 30) {
+          reason = 'Very low activity';
+        } else if (lastActivityDays >= 3) {
+          reason = `No activity for ${lastActivityDays} days`;
+        }
+        
+        return {
+          clientId: client.userId,
+          name: `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.email,
+          email: client.email,
+          progress,
+          lastActivityDays,
+          reason,
+        };
+      })
+    );
+    
+    // Filter clients with progress < 30% OR 3+ days inactive
+    return lowActivityClients
+      .filter(c => c.progress < 30 || c.lastActivityDays >= 3)
+      .sort((a, b) => a.progress - b.progress);
+  }
+
+  // Get habit and water compliance for coach dashboard
+  async getHabitWaterCompliance(orgId: number, coachId?: string): Promise<Array<{
+    clientId: string;
+    name: string;
+    habitCompliance: number;
+    waterCompliance: number;
+  }>> {
+    // Get all active clients (optionally filtered by coach)
+    let clientsResult;
+    if (coachId) {
+      clientsResult = await db.execute<{
+        id: number;
+        email: string;
+        first_name: string | null;
+        last_name: string | null;
+      }>(
+        sql`SELECT id, email, first_name, last_name 
+            FROM org_users 
+            WHERE organization_id = ${orgId}
+              AND role = 'client'
+              AND is_active = true
+              AND (status = 'active' OR status IS NULL)
+              AND coach_id = ${coachId}`
+      );
+    } else {
+      clientsResult = await db.execute<{
+        id: number;
+        email: string;
+        first_name: string | null;
+        last_name: string | null;
+      }>(
+        sql`SELECT id, email, first_name, last_name 
+            FROM org_users 
+            WHERE organization_id = ${orgId}
+              AND role = 'client'
+              AND is_active = true
+              AND (status = 'active' OR status IS NULL)`
+      );
+    }
+    
+    const clients = clientsResult.rows.map(r => ({
+      id: r.id,
+      userId: r.id.toString(),
+      email: r.email,
+      firstName: r.first_name,
+      lastName: r.last_name,
+    }));
+    
+    if (clients.length === 0) {
+      return [];
+    }
+    
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    
+    // Calculate compliance for each client
+    const compliance = await Promise.all(
+      clients.map(async (client) => {
+        const [habitCount, waterCount] = await Promise.all([
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(habitLogs)
+            .where(and(
+              eq(habitLogs.userId, client.userId),
+              eq(habitLogs.completed, true),
+              gte(habitLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
+            ))
+            .then(r => r[0]?.count || 0),
+          
+          db.select({ count: sql<number>`count(*)::int` })
+            .from(waterLogs)
+            .where(and(
+              eq(waterLogs.userId, client.userId),
+              gte(waterLogs.logDate, sevenDaysAgo.toISOString().split('T')[0])
+            ))
+            .then(r => r[0]?.count || 0),
+        ]);
+        
+        // Expected: 7 days of tracking
+        const habitCompliance = Math.min(100, Math.round((habitCount / 7) * 100));
+        const waterCompliance = Math.min(100, Math.round((waterCount / 7) * 100));
+        
+        return {
+          clientId: client.userId,
+          name: `${client.firstName || ''} ${client.lastName || ''}`.trim() || client.email,
+          habitCompliance,
+          waterCompliance,
+        };
+      })
+    );
+    
+    return compliance;
   }
 }
 

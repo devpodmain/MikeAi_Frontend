@@ -68,6 +68,9 @@ export default function MealPlanDashboard() {
     setPreviewError(null);
     setPreviewModalOpen(true);
     
+    // Scroll to top to ensure dialog is properly centered in viewport
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    
     try {
       const profile = await getUserProfile(user.id);
       const preview = await generatePlanPreview(profile, selectedDays, selectedMeals);
@@ -124,6 +127,8 @@ export default function MealPlanDashboard() {
     
     if (previewPlan && !settingsChanged) {
       setPreviewModalOpen(true);
+      // Scroll to top to ensure dialog is properly centered in viewport
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       handlePreviewGenerate();
     }
@@ -140,6 +145,8 @@ export default function MealPlanDashboard() {
     
     if (previewPlan && !settingsChanged) {
       setPreviewModalOpen(true);
+      // Scroll to top to ensure dialog is properly centered in viewport
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       handlePreviewGenerate();
     }

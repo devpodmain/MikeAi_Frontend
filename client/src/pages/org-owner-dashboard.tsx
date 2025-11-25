@@ -103,7 +103,8 @@ export default function OrgOwnerDashboard() {
   const [workoutPlanIdBeingEdited, setWorkoutPlanIdBeingEdited] = useState<number | null>(null);
   const [aiMealPlanDialogOpen, setAiMealPlanDialogOpen] = useState(false);
   const [aiWorkoutPlanDialogOpen, setAiWorkoutPlanDialogOpen] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiMealGenerating, setAiMealGenerating] = useState(false);
+  const [aiWorkoutGenerating, setAiWorkoutGenerating] = useState(false);
   const [manageActiveMembersOpen, setManageActiveMembersOpen] = useState(false);
   const [swapRole, setSwapRole] = useState<'coach' | 'client'>('coach');
   const [swapActivateMemberId, setSwapActivateMemberId] = useState<number | null>(null);
@@ -711,7 +712,7 @@ export default function OrgOwnerDashboard() {
 
   // AI Generation handlers
   const generateAIMealPlan = async () => {
-    setAiGenerating(true);
+    setAiMealGenerating(true);
     try {
       // Build profile from AI form data
       const profile = {
@@ -803,12 +804,12 @@ export default function OrgOwnerDashboard() {
         variant: "destructive"
       });
     } finally {
-      setAiGenerating(false);
+      setAiMealGenerating(false);
     }
   };
 
   const generateAIWorkoutPlan = async () => {
-    setAiGenerating(true);
+    setAiWorkoutGenerating(true);
     try {
       // Build profile from AI form data
       const profile = {
@@ -876,7 +877,7 @@ export default function OrgOwnerDashboard() {
         variant: "destructive"
       });
     } finally {
-      setAiGenerating(false);
+      setAiWorkoutGenerating(false);
     }
   };
 
@@ -947,7 +948,22 @@ export default function OrgOwnerDashboard() {
   
   // Billing tier check for FREE tier restrictions
   const isFreeTier = billing?.tier === 'free';
-  const isFreeRestricted = isFreeTier;
+  
+  // Check if subscription is expired (period has ended)
+  const isSubscriptionExpired = billing?.currentPeriodEndsAt 
+    ? new Date() > new Date(billing.currentPeriodEndsAt) 
+    : false;
+  
+  // Check if billing status is explicitly expired (only restrict on 'expired' status, not other statuses)
+  const isBillingExpired = billing?.status === 'expired';
+  
+  // Restrict plan creation if: free tier with 0 capacity, subscription period expired, or billing explicitly expired
+  const isFreeTierWithNoCapacity = isFreeTier && 
+    (billing?.totalCoachAllowance || 0) === 0 && 
+    (billing?.totalClientAllowance || 0) === 0;
+  
+  // Combined restriction flag - restrict if any of these conditions are true
+  const isFreeRestricted = isFreeTierWithNoCapacity || isSubscriptionExpired || isBillingExpired;
 
   const filteredClients = clients.filter((client: OrgMember) =>
     client.firstName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -2793,7 +2809,7 @@ export default function OrgOwnerDashboard() {
 
         {/* AI Meal Plan Generation Dialog */}
         <Dialog open={aiMealPlanDialogOpen} onOpenChange={(open) => {
-          if (!open && aiGenerating) return;
+          if (!open && aiMealGenerating) return;
           setAiMealPlanDialogOpen(open);
         }}>
           <DialogContent className="bg-white border-gray-200 max-w-md">
@@ -2899,7 +2915,7 @@ export default function OrgOwnerDashboard() {
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-3">
-              {aiGenerating && (
+              {aiMealGenerating && (
                 <div className="w-full text-center space-y-2">
                   <p className="text-sm text-blue-600 dark:text-blue-400">
                     AI is generating your personalized meal plan...
@@ -2912,15 +2928,15 @@ export default function OrgOwnerDashboard() {
                 </div>
               )}
               <div className="flex w-full justify-end gap-2">
-                <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)} disabled={aiGenerating}>
+                <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)} disabled={aiMealGenerating}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={generateAIMealPlan}
-                  disabled={aiGenerating}
+                  disabled={aiMealGenerating}
                   className="bg-blue-500 hover:bg-blue-600"
                 >
-                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                  {aiMealGenerating ? "Generating..." : "Generate Plan"}
                 </Button>
               </div>
             </DialogFooter>
@@ -2929,7 +2945,7 @@ export default function OrgOwnerDashboard() {
 
         {/* AI Workout Plan Generation Dialog */}
         <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={(open) => {
-          if (!open && aiGenerating) return;
+          if (!open && aiWorkoutGenerating) return;
           setAiWorkoutPlanDialogOpen(open);
         }}>
           <DialogContent className="bg-white border-gray-200 max-w-md">
@@ -3013,7 +3029,7 @@ export default function OrgOwnerDashboard() {
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-3">
-              {aiGenerating && (
+              {aiWorkoutGenerating && (
                 <div className="w-full text-center space-y-2">
                   <p className="text-sm text-purple-600 dark:text-purple-400">
                     AI is generating your personalized workout plan...
@@ -3026,15 +3042,15 @@ export default function OrgOwnerDashboard() {
                 </div>
               )}
               <div className="flex w-full justify-end gap-2">
-                <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)} disabled={aiGenerating}>
+                <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)} disabled={aiWorkoutGenerating}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={generateAIWorkoutPlan}
-                  disabled={aiGenerating}
+                  disabled={aiWorkoutGenerating}
                   className="bg-blue-500 hover:bg-blue-600"
                 >
-                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                  {aiWorkoutGenerating ? "Generating..." : "Generate Plan"}
                 </Button>
               </div>
             </DialogFooter>

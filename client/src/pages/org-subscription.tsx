@@ -54,7 +54,7 @@ interface OrgBilling {
 export default function OrgSubscription() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
   const [addonDialogOpen, setAddonDialogOpen] = useState(false);
   const [addonType, setAddonType] = useState<'coach' | 'client'>('coach');
   const [addonQuantity, setAddonQuantity] = useState(1);
@@ -144,7 +144,7 @@ export default function OrgSubscription() {
   ];
 
   const handleUpgrade = async (tier: SubscriptionTier) => {
-    setLoading(true);
+    setLoadingTier(tier.id);
     
     try {
       // Create checkout session and get redirect URL
@@ -164,7 +164,7 @@ export default function OrgSubscription() {
           description: "Failed to initialize payment. Please try again.",
           variant: "destructive",
         });
-        setLoading(false);
+        setLoadingTier(null);
       }
     } catch (error: any) {
       // Check if it's a downgrade protection error
@@ -182,7 +182,7 @@ export default function OrgSubscription() {
           variant: "destructive",
         });
       }
-      setLoading(false);
+      setLoadingTier(null);
     }
   };
 
@@ -621,7 +621,7 @@ export default function OrgSubscription() {
                   ) : (
                     <Button
                       onClick={() => handleUpgrade(tier)}
-                      disabled={loading}
+                      disabled={loadingTier !== null}
                       className={`w-full py-6 text-lg ${
                         tier.popular
                           ? "bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold"
@@ -629,7 +629,7 @@ export default function OrgSubscription() {
                       }`}
                       data-testid={`button-upgrade-${tier.id}`}
                     >
-                      {loading ? (
+                      {loadingTier === tier.id ? (
                         "Processing..."
                       ) : (
                         <>

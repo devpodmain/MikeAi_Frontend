@@ -27,7 +27,7 @@ export function ProfileCompletionAlert() {
               <div className="mt-2 text-sm">
                 Missing: {missingFields.join(", ")}
               </div>
-              <Link href="/profile">
+              <Link href="/profile-settings">
                 <Button 
                   variant="outline" 
                   size="sm" 

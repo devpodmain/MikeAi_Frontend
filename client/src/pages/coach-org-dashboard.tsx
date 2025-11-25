@@ -97,7 +97,8 @@ export default function CoachOrgDashboard() {
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   const [aiMealPlanDialogOpen, setAiMealPlanDialogOpen] = useState(false);
   const [aiWorkoutPlanDialogOpen, setAiWorkoutPlanDialogOpen] = useState(false);
-  const [aiGenerating, setAiGenerating] = useState(false);
+  const [aiMealGenerating, setAiMealGenerating] = useState(false);
+  const [aiWorkoutGenerating, setAiWorkoutGenerating] = useState(false);
   
   // Edit day mapping states
   const [editDayMappingOpen, setEditDayMappingOpen] = useState(false);
@@ -669,7 +670,7 @@ export default function CoachOrgDashboard() {
 
   // AI Generation handlers
   const generateAIMealPlan = async () => {
-    setAiGenerating(true);
+    setAiMealGenerating(true);
     try {
       // Build profile from AI form data
       const profile = {
@@ -761,12 +762,12 @@ export default function CoachOrgDashboard() {
         variant: "destructive"
       });
     } finally {
-      setAiGenerating(false);
+      setAiMealGenerating(false);
     }
   };
 
   const generateAIWorkoutPlan = async () => {
-    setAiGenerating(true);
+    setAiWorkoutGenerating(true);
     try {
       // Build profile from AI form data
       const profile = {
@@ -834,7 +835,7 @@ export default function CoachOrgDashboard() {
         variant: "destructive"
       });
     } finally {
-      setAiGenerating(false);
+      setAiWorkoutGenerating(false);
     }
   };
 
@@ -2127,7 +2128,7 @@ export default function CoachOrgDashboard() {
 
         {/* AI Meal Plan Generation Dialog */}
         <Dialog open={aiMealPlanDialogOpen} onOpenChange={(open) => {
-          if (!open && aiGenerating) return;
+          if (!open && aiMealGenerating) return;
           setAiMealPlanDialogOpen(open);
         }}>
           <DialogContent className="bg-white border-gray-200 max-w-md">
@@ -2233,7 +2234,7 @@ export default function CoachOrgDashboard() {
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-3">
-              {aiGenerating && (
+              {aiMealGenerating && (
                 <div className="w-full text-center space-y-2">
                   <p className="text-sm text-blue-600 dark:text-blue-400">
                     AI is generating your personalized meal plan...
@@ -2246,15 +2247,15 @@ export default function CoachOrgDashboard() {
                 </div>
               )}
               <div className="flex w-full justify-end gap-2">
-                <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)} disabled={aiGenerating}>
+                <Button variant="outline" onClick={() => setAiMealPlanDialogOpen(false)} disabled={aiMealGenerating}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={generateAIMealPlan}
-                  disabled={aiGenerating}
+                  disabled={aiMealGenerating}
                   className="bg-blue-500 hover:bg-blue-600"
                 >
-                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                  {aiMealGenerating ? "Generating..." : "Generate Plan"}
                 </Button>
               </div>
             </DialogFooter>
@@ -2263,7 +2264,7 @@ export default function CoachOrgDashboard() {
 
         {/* AI Workout Plan Generation Dialog */}
         <Dialog open={aiWorkoutPlanDialogOpen} onOpenChange={(open) => {
-          if (!open && aiGenerating) return;
+          if (!open && aiWorkoutGenerating) return;
           setAiWorkoutPlanDialogOpen(open);
         }}>
           <DialogContent className="bg-white border-gray-200 max-w-md">
@@ -2347,7 +2348,7 @@ export default function CoachOrgDashboard() {
               </div>
             </div>
             <DialogFooter className="flex-col items-start gap-3">
-              {aiGenerating && (
+              {aiWorkoutGenerating && (
                 <div className="w-full text-center space-y-2">
                   <p className="text-sm text-purple-600 dark:text-purple-400">
                     AI is generating your personalized workout plan...
@@ -2360,15 +2361,15 @@ export default function CoachOrgDashboard() {
                 </div>
               )}
               <div className="flex w-full justify-end gap-2">
-                <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)} disabled={aiGenerating}>
+                <Button variant="outline" onClick={() => setAiWorkoutPlanDialogOpen(false)} disabled={aiWorkoutGenerating}>
                   Cancel
                 </Button>
                 <Button 
                   onClick={generateAIWorkoutPlan}
-                  disabled={aiGenerating}
+                  disabled={aiWorkoutGenerating}
                   className="bg-blue-500 hover:bg-blue-600"
                 >
-                  {aiGenerating ? "Generating..." : "Generate Plan"}
+                  {aiWorkoutGenerating ? "Generating..." : "Generate Plan"}
                 </Button>
               </div>
             </DialogFooter>

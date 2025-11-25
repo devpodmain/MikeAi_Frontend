@@ -94,6 +94,9 @@ export default function WorkoutsPage() {
     setIsPreviewing(true);
     setPreviewError(null);
     setPreviewModalOpen(true);
+    
+    // Scroll to top to ensure dialog is properly centered in viewport
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const sortedEquipment = equipment && equipment.length > 0 ? equipment.slice().sort() : undefined;
     
@@ -180,6 +183,8 @@ export default function WorkoutsPage() {
     
     if (previewPlan && !payloadChanged) {
       setPreviewModalOpen(true);
+      // Scroll to top to ensure dialog is properly centered in viewport
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       handlePreviewGenerate();
     }

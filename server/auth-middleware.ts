@@ -262,6 +262,36 @@ export async function requireOrgActiveSubscription(req: any, res: Response, next
   }
 }
 
+// Middleware to block plan creation for FREE tier and expired orgs (NO owner bypass)
+// This ensures org owners cannot create plans unless they have an active paid subscription
+export async function requireOrgPaidSubscription(req: any, res: Response, next: NextFunction) {
+  try {
+    const orgId = parseInt(req.params.orgId || req.params.id || req.organizationId);
+    
+    if (isNaN(orgId)) {
+      return res.status(400).json({ message: "Invalid organization ID" });
+    }
+
+    const billingStatus = await getOrgBillingStatus(orgId);
+    
+    // Block if on FREE tier or billing is locked/expired - NO owner bypass for plan creation
+    if (billingStatus.locked || billingStatus.tier === 'free') {
+      return res.status(402).json({ 
+        message: "Subscription required: Please upgrade to create plans",
+        locked: true,
+        tier: billingStatus.tier,
+        requiresUpgrade: true
+      });
+    }
+
+    req.billingStatus = billingStatus;
+    next();
+  } catch (error) {
+    console.error('Error in requireOrgPaidSubscription:', error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 // Middleware to allow both coaches and owners
 export async function requireCoachOrOwner(req: any, res: Response, next: NextFunction) {
   try {

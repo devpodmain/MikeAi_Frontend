@@ -4,6 +4,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
+import { Link } from "wouter";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,7 +28,8 @@ import {
   ChefHat, 
   Shield,
   Save,
-  CheckCircle
+  CheckCircle,
+  ArrowLeft
 } from "lucide-react";
 
 // Form validation schema
@@ -77,9 +80,27 @@ const conditionOptions = ["diabetes", "pcos", "hypertension", "heart_disease", "
 
 export default function ProfileSettings() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
+
+  const getDashboardRoute = () => {
+    if (!user) return '/user-home';
+    
+    const userType = user.userType || user.role;
+    
+    switch (userType) {
+      case 'org_owner':
+        return '/org-owner-dashboard';
+      case 'coach':
+        return '/coach-org-dashboard';
+      case 'org_client':
+        return '/org-client-dashboard';
+      default:
+        return '/user-home';
+    }
+  };
 
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
@@ -225,6 +246,16 @@ export default function ProfileSettings() {
     <div className="container mx-auto p-6">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
+          <Link to={getDashboardRoute()}>
+            <Button 
+              variant="ghost" 
+              className="mb-4 text-gray-600 hover:text-gray-900"
+              data-testid="button-back-to-dashboard"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Back to Dashboard
+            </Button>
+          </Link>
           <h1 className="text-3xl font-bold text-gray-900">Profile Settings</h1>
           <p className="text-gray-600 mt-2">
             Set up your personal preferences to get tailored meal plans and nutrition guidance.

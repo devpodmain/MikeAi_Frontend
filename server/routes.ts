@@ -56,6 +56,7 @@ import {
   validateOrgId,
   getUserOrgPermissions,
   requireOrgActiveSubscription,
+  requireOrgPaidSubscription,
   getOrgBillingStatus
 } from "./auth-middleware";
 
@@ -2020,8 +2021,8 @@ Always prioritize health, safety, and sustainable practices.`;
         payment_method_types: ['card'],
         line_items: lineItems,
         mode: 'payment',
-        success_url: `${baseUrl}/org/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${baseUrl}/org-owner-home`,
+        success_url: `${baseUrl}/org-subscription-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `${baseUrl}/org-subscription`,
         metadata: {
           organizationId: org.id.toString(),
           ownerId: userId,
@@ -2635,10 +2636,22 @@ Always prioritize health, safety, and sustainable practices.`;
           // Reset swap tracking ONLY for truly new billing period (not webhook replays)
           await storage.resetSwapTrackingForNewPeriod(orgId);
 
-          // Auto-lock excess members if downgrade occurred
+          // Enforce capacity limits: auto-lock excess members if downgrade occurred
+          // AND auto-unlock locked members if capacity is now available (renewal from expired)
           const coachQuota = baseLimits.coaches + (parseInt(addonCoachQty) || 0);
           const clientQuota = baseLimits.clients + (parseInt(addonClientQty) || 0);
-          await storage.autoLockExcessMembers(orgId, coachQuota, clientQuota, newPeriod.id);
+          
+          // First unlock members that were locked due to expiry/downgrade (since we have new capacity)
+          const unlockResult = await storage.autoUnlockWhenCapacityAvailable(orgId, coachQuota, clientQuota, newPeriod.id);
+          if (unlockResult.coachesUnlocked > 0 || unlockResult.clientsUnlocked > 0) {
+            console.log(`[SUBSCRIPTION RENEWAL] Unlocked ${unlockResult.coachesUnlocked} coaches and ${unlockResult.clientsUnlocked} clients for org ${orgId}`);
+          }
+          
+          // Then lock any excess members if still over capacity
+          const lockResult = await storage.autoLockExcessMembers(orgId, coachQuota, clientQuota, newPeriod.id);
+          if (lockResult.coachesLocked > 0 || lockResult.clientsLocked > 0) {
+            console.log(`[SUBSCRIPTION RENEWAL] Locked ${lockResult.coachesLocked} coaches and ${lockResult.clientsLocked} clients for org ${orgId}`);
+          }
           
           return res.json({ received: true });
         }
@@ -5389,45 +5402,50 @@ Always prioritize health, safety, and sustainable practices.`;
         });
       }
 
-      // Check billing period limits (default to FREE tier if no active billing period)
-      const billingPeriod = await storage.getActiveBillingPeriod(orgId);
+      // Check billing period limits - FREE tier has 0 capacity
+      const billingStatus = await getOrgBillingStatus(orgId);
       
-      // Default to FREE tier limits if no billing period exists
-      const defaultFreeCoaches = 1;
-      const defaultFreeClients = 5;
+      // FREE tier or expired orgs have 0 capacity - must upgrade to add members
+      const totalAllowedCoaches = billingStatus.locked || billingStatus.tier === 'free' 
+        ? 0 
+        : billingStatus.totalCoachAllowance;
       
-      const totalAllowedCoaches = billingPeriod 
-        ? billingPeriod.baseCoachAllowance + billingPeriod.addonCoachQty
-        : defaultFreeCoaches;
+      const totalAllowedClients = billingStatus.locked || billingStatus.tier === 'free' 
+        ? 0 
+        : billingStatus.totalClientAllowance;
+
+      // For FREE tier, provide a clear upgrade message
+      const isFreeOrLocked = billingStatus.locked || billingStatus.tier === 'free';
       
-      const totalAllowedClients = billingPeriod 
-        ? billingPeriod.baseClientAllowance + billingPeriod.addonClientQty
-        : defaultFreeClients;
+      const orgWithCounts = await storage.getOrganizationWithCounts(orgId);
+      if (!orgWithCounts) {
+        return res.status(500).json({ message: "Failed to fetch organization data" });
+      }
 
       if (role === 'coach') {
-        const orgWithCounts = await storage.getOrganizationWithCounts(orgId);
-        if (!orgWithCounts) {
-          return res.status(500).json({ message: "Failed to fetch organization data" });
-        }
-        
         if (orgWithCounts.coachCount >= totalAllowedCoaches) {
-          return res.status(400).json({ 
-            message: `Maximum coach limit (${totalAllowedCoaches}) reached. Upgrade your subscription or purchase additional coach slots to add more.`,
+          const errorMessage = isFreeOrLocked
+            ? "Subscription required: Please upgrade to a paid plan to add team members."
+            : `Maximum coach limit (${totalAllowedCoaches}) reached. Upgrade your subscription or purchase additional coach slots to add more.`;
+          
+          return res.status(isFreeOrLocked ? 402 : 400).json({ 
+            message: errorMessage,
             limitReached: true,
+            requiresUpgrade: isFreeOrLocked,
             currentCount: orgWithCounts.coachCount,
             maxAllowed: totalAllowedCoaches
           });
         }
       } else {
-        const orgWithCounts = await storage.getOrganizationWithCounts(orgId);
-        if (!orgWithCounts) {
-          return res.status(500).json({ message: "Failed to fetch organization data" });
-        }
-        
         if (orgWithCounts.clientCount >= totalAllowedClients) {
-          return res.status(400).json({ 
-            message: `Maximum client limit (${totalAllowedClients}) reached. Upgrade your subscription or purchase additional client slots to add more.`,
+          const errorMessage = isFreeOrLocked
+            ? "Subscription required: Please upgrade to a paid plan to add clients."
+            : `Maximum client limit (${totalAllowedClients}) reached. Upgrade your subscription or purchase additional client slots to add more.`;
+          
+          return res.status(isFreeOrLocked ? 402 : 400).json({ 
+            message: errorMessage,
             limitReached: true,
+            requiresUpgrade: isFreeOrLocked,
             currentCount: orgWithCounts.clientCount,
             maxAllowed: totalAllowedClients
           });
@@ -5976,7 +5994,8 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // 12. POST /api/organizations/:orgId/meal-plans - Create meal plan (coaches and owners only)
-  app.post('/api/organizations/:orgId/meal-plans', requireOrgActiveSubscription, requireCoachOrOwner, async (req: any, res) => {
+  // Uses requireOrgPaidSubscription to block FREE tier/expired orgs from creating plans
+  app.post('/api/organizations/:orgId/meal-plans', requireOrgPaidSubscription, requireCoachOrOwner, async (req: any, res) => {
     try {
       const orgId = parseInt(req.params.orgId);
       const userId = getUserId(req);
@@ -6084,7 +6103,8 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // 13. POST /api/organizations/:orgId/workout-plans - Create workout plan (coaches and owners only)
-  app.post('/api/organizations/:orgId/workout-plans', requireOrgActiveSubscription, requireCoachOrOwner, async (req: any, res) => {
+  // Uses requireOrgPaidSubscription to block FREE tier/expired orgs from creating plans
+  app.post('/api/organizations/:orgId/workout-plans', requireOrgPaidSubscription, requireCoachOrOwner, async (req: any, res) => {
     try {
       const orgId = parseInt(req.params.orgId);
       const userId = getUserId(req);
@@ -6138,7 +6158,8 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // 15. POST /api/organizations/:orgId/plans/assign - Assign plan to clients (coaches and owners only)
-  app.post('/api/organizations/:orgId/plans/assign', requireOrgActiveSubscription, requireCoachOrOwner, async (req: any, res) => {
+  // Uses requireOrgPaidSubscription to block FREE tier/expired orgs from assigning plans
+  app.post('/api/organizations/:orgId/plans/assign', requireOrgPaidSubscription, requireCoachOrOwner, async (req: any, res) => {
     try {
       const orgId = parseInt(req.params.orgId);
       const userId = getUserId(req);
