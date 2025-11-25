@@ -640,6 +640,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post('/api/workout-plans/preview', requireAuth, async (req: any, res) => {
+    // Disable timeouts for AI generation - these can take several minutes for larger plans
+    req.setTimeout(0);
+    res.setTimeout(0);
+    
     try {
       const userId = getUserId(req);
       if (!userId) {
@@ -3119,6 +3123,10 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   app.post('/api/meal-plans/preview', requireAuth, async (req: any, res) => {
+    // Disable timeouts for AI generation - these can take several minutes for larger plans
+    req.setTimeout(0);
+    res.setTimeout(0);
+    
     try {
       const userId = getUserId(req);
       if (!userId) {
