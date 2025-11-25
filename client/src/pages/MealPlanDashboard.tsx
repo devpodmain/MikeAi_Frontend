@@ -97,7 +97,10 @@ export default function MealPlanDashboard() {
     try {
       await persistPlan(user.id, previewPlan);
       didPersist = true;
-      await queryClient.invalidateQueries({ queryKey: ['/api/meal-plans', user.id] });
+      // Set the query data directly to update UI immediately (like workout plan does)
+      queryClient.setQueryData(['meal-plan', user.id], previewPlan);
+      // Also invalidate to ensure fresh data from server
+      await queryClient.invalidateQueries({ queryKey: ['meal-plan', user.id] });
     } catch (err: any) {
       setPreviewError(err instanceof Error ? err.message : 'Failed to save plan');
     } finally {
