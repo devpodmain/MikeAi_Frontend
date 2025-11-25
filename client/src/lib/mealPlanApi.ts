@@ -272,7 +272,7 @@ export async function persistPlan(userId: string, plan: Plan): Promise<void> {
   }
 }
 
-export async function loadExistingPlan(userId: string): Promise<(Plan & { id?: string }) | null> {
+export async function loadExistingPlan(userId: string): Promise<Plan | null> {
   try {
     const response = await fetch('/api/meal-plans', {
       method: 'GET',
@@ -289,7 +289,7 @@ export async function loadExistingPlan(userId: string): Promise<(Plan & { id?: s
       const activePlan = plans.find((p: any) => p.isActive) || plans[0];
       // Return plan data with database id attached for deletion
       const planData = activePlan.planData as Plan;
-      return { ...planData, id: activePlan.id };
+      return { ...planData, id: activePlan.id } as Plan & { id: number };
     }
     
     return null;

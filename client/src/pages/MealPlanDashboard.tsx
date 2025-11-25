@@ -213,33 +213,35 @@ export default function MealPlanDashboard() {
           </Alert>
         )}
 
-        {/* Generation Controls */}
-        <Card className="mb-8 relative">
-          {/* Loading Overlay - Shows on the form while AI generates */}
-          {isPreviewing && (
-            <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-              <div className="text-center space-y-4 p-8">
-                <div className="relative">
-                  <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto" />
-                  <Sparkles className="w-8 h-8 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        {/* Full-Page Loading Overlay - Shows while AI generates */}
+        {isPreviewing && (
+          <div className="fixed inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="text-center space-y-6 p-8">
+              <div className="relative">
+                <div className="w-24 h-24 mx-auto">
+                  <Loader2 className="w-24 h-24 text-blue-600 animate-spin" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-blue-900 dark:text-blue-300 mb-2">
-                    AI is Creating Your Meal Plan
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Analyzing your profile and generating personalized meals...
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-1">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+                <Sparkles className="w-10 h-10 text-purple-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-blue-900 dark:text-blue-300 mb-3">
+                  AI is Creating Your Meal Plan
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  Analyzing your profile and generating personalized meals...
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-3 h-3 bg-blue-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
-          )}
-          
+          </div>
+        )}
+
+        {/* Generation Controls */}
+        <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-purple-600" />
@@ -537,10 +539,10 @@ export default function MealPlanDashboard() {
                               <div key={mealIndex} className="p-3 bg-white dark:bg-gray-800 border rounded-lg">
                                 <div className="flex items-start justify-between">
                                   <div className="flex-1">
-                                    <div className="font-medium text-gray-900 dark:text-white">{meal.slot}</div>
-                                    <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">{meal.name}</div>
+                                    <div className="font-medium text-gray-900 dark:text-white capitalize">{meal.slot?.replace('_', ' ')}</div>
+                                    <div className="text-sm text-gray-700 dark:text-gray-300 mt-1">{meal.title || meal.name}</div>
                                     <div className="text-xs text-gray-500 mt-1">
-                                      {meal.calories} cal | P: {meal.protein}g | C: {meal.carbs}g | F: {meal.fats}g
+                                      {meal.calories} cal | P: {meal.macros?.protein || meal.protein || 0}g | C: {meal.macros?.carbs || meal.carbs || 0}g | F: {meal.macros?.fat || meal.fats || 0}g
                                     </div>
                                   </div>
                                 </div>

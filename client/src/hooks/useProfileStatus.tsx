@@ -23,7 +23,6 @@ const REQUIRED_FIELDS: Array<{ key: keyof UserProfile; label: string }> = [
   { key: "weight", label: "Weight" },
   { key: "fitnessGoal", label: "Fitness Goal" },
   { key: "activityLevel", label: "Activity Level" },
-  { key: "dietType", label: "Diet Type" },
   { key: "mealsPerDay", label: "Meals Per Day" },
 ];
 

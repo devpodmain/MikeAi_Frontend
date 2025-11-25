@@ -236,33 +236,35 @@ export default function WorkoutsPage() {
       <div className="max-w-7xl mx-auto px-4 py-8 space-y-8">
         <ProfileCompletionAlert />
 
-        {/* Create form */}
-        <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl relative">
-          {/* Loading Overlay - Shows on the form while AI generates */}
-          {isPreviewing && (
-            <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-              <div className="text-center space-y-4 p-8">
-                <div className="relative">
-                  <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
-                  <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+        {/* Full-Page Loading Overlay - Shows while AI generates */}
+        {isPreviewing && (
+          <div className="fixed inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="text-center space-y-6 p-8">
+              <div className="relative">
+                <div className="w-24 h-24 mx-auto">
+                  <Loader2 className="w-24 h-24 text-purple-600 animate-spin" />
                 </div>
-                <div>
-                  <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
-                    AI is Creating Your Workout Plan
-                  </h3>
-                  <p className="text-gray-600 dark:text-gray-400">
-                    Designing exercises and training schedule based on your goals...
-                  </p>
-                </div>
-                <div className="flex items-center justify-center gap-1">
-                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+                <Sparkles className="w-10 h-10 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+              </div>
+              <div>
+                <h3 className="text-2xl font-bold text-purple-900 dark:text-purple-300 mb-3">
+                  AI is Creating Your Workout Plan
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  Designing exercises and training schedule based on your goals...
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-2">
+                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-3 h-3 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
-          )}
-          
+          </div>
+        )}
+
+        {/* Create form */}
+        <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl">
           <CardHeader className="pb-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
