@@ -93,9 +93,9 @@ export default function WorkoutsPage() {
     if (!profile) return;
     setIsPreviewing(true);
     setPreviewError(null);
-    setPreviewModalOpen(true);
+    setPreviewPlan(null);
     
-    // Scroll to top to ensure dialog is properly centered in viewport
+    // Scroll to top so user can see the loading overlay on the form
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
     const sortedEquipment = equipment && equipment.length > 0 ? equipment.slice().sort() : undefined;
@@ -119,8 +119,12 @@ export default function WorkoutsPage() {
       const preview = await generateWorkoutPlanPreview(normalizedProfile, prefs);
       setPreviewPlan(preview);
       setPreviewPayloadHash(JSON.stringify({ profile: normalizedProfile, prefs }));
+      // Only open the dialog AFTER data is successfully fetched
+      setPreviewModalOpen(true);
     } catch (e: any) {
       setPreviewError(e?.message || "Failed to generate preview");
+      // Still open the modal to show the error
+      setPreviewModalOpen(true);
     } finally {
       setIsPreviewing(false);
     }
@@ -182,9 +186,8 @@ export default function WorkoutsPage() {
     const payloadChanged = previewPayloadHash && (previewPayloadHash !== currentPayloadHash);
     
     if (previewPlan && !payloadChanged) {
+      // We already have a cached preview, just open the dialog
       setPreviewModalOpen(true);
-      // Scroll to top to ensure dialog is properly centered in viewport
-      window.scrollTo({ top: 0, behavior: 'smooth' });
     } else {
       handlePreviewGenerate();
     }
@@ -234,7 +237,32 @@ export default function WorkoutsPage() {
         <ProfileCompletionAlert />
 
         {/* Create form */}
-        <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl">
+        <Card className="bg-white/80 backdrop-blur-sm border border-white/20 shadow-xl relative">
+          {/* Loading Overlay - Shows on the form while AI generates */}
+          {isPreviewing && (
+            <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
+              <div className="text-center space-y-4 p-8">
+                <div className="relative">
+                  <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
+                  <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
+                    AI is Creating Your Workout Plan
+                  </h3>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    Designing exercises and training schedule based on your goals...
+                  </p>
+                </div>
+                <div className="flex items-center justify-center gap-1">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
           <CardHeader className="pb-6">
             <div className="flex items-center space-x-3">
               <div className="p-2 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg">
@@ -618,37 +646,12 @@ export default function WorkoutsPage() {
           </Card>
         )}
 
-        {/* Preview Modal */}
+        {/* Preview Modal - Only opens after data is fetched */}
         <Dialog open={previewModalOpen} onOpenChange={(open) => {
-          if (!open && (isPreviewing || isSavingPreview)) return;
+          if (!open && isSavingPreview) return;
           setPreviewModalOpen(open);
         }}>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto relative">
-            {/* Loading Overlay for Previewing */}
-            {isPreviewing && (
-              <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
-                <div className="text-center space-y-4 p-8">
-                  <div className="relative">
-                    <Loader2 className="w-16 h-16 text-purple-600 animate-spin mx-auto" />
-                    <Sparkles className="w-8 h-8 text-blue-500 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 animate-pulse" />
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-bold text-purple-900 dark:text-purple-300 mb-2">
-                      AI is Creating Your Workout Plan
-                    </h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      Designing exercises and training schedule based on your goals...
-                    </p>
-                  </div>
-                  <div className="flex items-center justify-center gap-1">
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <div className="w-2 h-2 bg-purple-600 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
-                </div>
-              </div>
-            )}
-            
             {/* Loading Overlay for Saving */}
             {isSavingPreview && (
               <div className="absolute inset-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm z-50 flex items-center justify-center rounded-lg">
@@ -685,13 +688,31 @@ export default function WorkoutsPage() {
             </DialogHeader>
 
             <div className="space-y-4">
-              {!isPreviewing && !isSavingPreview && (
+              {!isSavingPreview && (
                 <>
                   {previewError && (
-                    <Alert variant="destructive">
-                      <AlertCircle className="h-4 w-4" />
-                      <AlertDescription>{previewError}</AlertDescription>
-                    </Alert>
+                    <div className="space-y-4">
+                      <Alert variant="destructive">
+                        <AlertCircle className="h-4 w-4" />
+                        <AlertDescription>{previewError}</AlertDescription>
+                      </Alert>
+                      <div className="text-center py-4">
+                        <p className="text-gray-600 dark:text-gray-400 mb-4">
+                          There was a problem generating your workout plan. Please try again.
+                        </p>
+                        <Button 
+                          onClick={() => {
+                            setPreviewModalOpen(false);
+                            setPreviewError(null);
+                            handlePreviewGenerate();
+                          }}
+                          className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                        >
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                          Try Again
+                        </Button>
+                      </div>
+                    </div>
                   )}
                   {previewPlan && (
                     <div className="space-y-4">
