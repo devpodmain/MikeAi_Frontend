@@ -210,11 +210,17 @@ function requireAuth(req: any, res: any, next: any) {
   return res.status(401).json({ message: "Not authenticated" });
 }
 
-// Middleware to check subscription status
+// Middleware to check subscription status (only for individual users)
 async function requireActiveSubscription(req: any, res: any, next: any) {
   const userId = getUserId(req);
   if (!userId) {
     return res.status(401).json({ message: "Unauthorized" });
+  }
+
+  // Check if this is an org member (coach/client) - they bypass individual trial system
+  const sessionUser = req.user;
+  if (sessionUser && sessionUser.authProvider === 'org_member') {
+    return next(); // Organization members use org billing, not individual trials
   }
 
   const user = await storage.getUser(userId);
@@ -222,6 +228,13 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
     return res.status(404).json({ message: "User not found" });
   }
 
+  // Organization users (org_owner, coach, org_client) bypass individual trial system
+  // They have their own org billing/payment system
+  if (['org_owner', 'coach', 'org_client', 'member'].includes(user.userType)) {
+    return next(); // Organization users are handled by org billing
+  }
+
+  // For individual users, check trial/subscription status
   // Check if user is still in trial period
   if (user.subscriptionStatus === "trial" && user.trialEndsAt) {
     const now = new Date();
@@ -235,7 +248,7 @@ async function requireActiveSubscription(req: any, res: any, next: any) {
     return next(); // Subscription is active
   }
 
-  // User needs to subscribe
+  // Individual user needs to subscribe
   return res.status(402).json({ 
     message: "Subscription required",
     trialExpired: user.subscriptionStatus === "trial" && user.trialEndsAt && new Date() >= user.trialEndsAt
@@ -656,7 +669,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required fields: profile, prefs" });
       }
 
-      const AI_API_BASE = process.env.VITE_API_BASE_URL || "https://mikeai.co/fastapi";
+      const AI_API_BASE = process.env.VITE_API_BASE_URL || "http://localhost:8000";
       
       const requestBody = {
         profile,
@@ -3189,7 +3202,7 @@ Always prioritize health, safety, and sustainable practices.`;
         return res.status(400).json({ message: "Missing required field: profile" });
       }
 
-      const AI_API_BASE = process.env.VITE_API_BASE_URL || "https://mikeai.co/fastapi";
+      const AI_API_BASE = process.env.VITE_API_BASE_URL || "http://localhost:8000";
       
       const requestBody = {
         profile,
@@ -4255,8 +4268,12 @@ Always prioritize health, safety, and sustainable practices.`;
 
   // AI Fitness Chat Proxy (protected - require active subscription)
   app.post('/api/ai/fitness/chat', requireAuth, requireActiveSubscription, async (req: any, res) => {
+    // Disable timeouts for AI generation - responses can take several minutes
+    req.setTimeout(0);
+    res.setTimeout(0);
+    
     try {
-      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi';
+      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'http://localhost:8000';
       
       const response = await fetch(`${AI_BACKEND}/ai/fitness/chat`, {
         method: 'POST',
@@ -4279,8 +4296,12 @@ Always prioritize health, safety, and sustainable practices.`;
 
   // AI Supplements Suggest Proxy (protected - require active subscription)
   app.post('/api/ai/supplements/suggest', requireAuth, requireActiveSubscription, async (req: any, res) => {
+    // Disable timeouts for AI generation - responses can take several minutes
+    req.setTimeout(0);
+    res.setTimeout(0);
+    
     try {
-      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'https://mikeai.co/fastapi';
+      const AI_BACKEND = process.env.VITE_API_BASE_URL || 'http://localhost:8000';
       
       const response = await fetch(`${AI_BACKEND}/ai/supplements/suggest`, {
         method: 'POST',
