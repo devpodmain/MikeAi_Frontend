@@ -5,8 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Link } from "wouter";
-
+import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,8 +33,8 @@ import {
 
 // Form validation schema
 const profileFormSchema = z.object({
-  // Personal Info
-  fullName: z.string().optional(),
+  // Personal Info - fullName is required
+  fullName: z.string().min(1, "Full name is required").min(2, "Full name must be at least 2 characters"),
   dateOfBirth: z.string().optional(),
   gender: z.enum(["male", "female", "other"]).optional(),
   
@@ -82,6 +81,7 @@ export default function ProfileSettings() {
   const { toast } = useToast();
   const { user } = useAuth();
   const queryClient = useQueryClient();
+  const [, setLocation] = useLocation();
   const [isSaving, setIsSaving] = useState(false);
   const [profileLoaded, setProfileLoaded] = useState(false);
 
@@ -105,6 +105,7 @@ export default function ProfileSettings() {
   const form = useForm<ProfileFormData>({
     resolver: zodResolver(profileFormSchema),
     defaultValues: {
+      fullName: "",
       allergies: [],
       preferredCuisines: [],
       chronicConditions: [],
@@ -222,6 +223,10 @@ export default function ProfileSettings() {
         description: "Your profile settings have been saved successfully.",
       });
       setIsSaving(false);
+      // Redirect to the user's dashboard after successful save
+      setTimeout(() => {
+        setLocation(getDashboardRoute());
+      }, 500);
     },
     onError: (error: any) => {
       toast({
@@ -365,12 +370,19 @@ export default function ProfileSettings() {
                   <CardContent className="pt-6 space-y-4">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <Label htmlFor="fullName">Full Name</Label>
+                        <Label htmlFor="fullName">Full Name <span className="text-red-500">*</span></Label>
                         <Input
                           id="fullName"
                           {...form.register("fullName")}
                           placeholder="Enter your full name"
+                          className={form.formState.errors.fullName ? "border-red-500" : ""}
+                          data-testid="input-fullName"
                         />
+                        {form.formState.errors.fullName && (
+                          <p className="text-sm text-red-500 mt-1" data-testid="error-fullName">
+                            {form.formState.errors.fullName.message}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <Label htmlFor="dateOfBirth">Date of Birth</Label>

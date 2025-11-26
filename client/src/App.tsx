@@ -60,7 +60,8 @@ interface ProtectedRouteProps {
 
 function ProtectedRoute({ component: Component, allowedUserTypes, requiresOrgMembership }: ProtectedRouteProps) {
   const { user } = useAuth();
-  const [, setLocation] = useLocation();  
+  const [, setLocation] = useLocation();
+  
   const userType = (user as any)?.userType || 'individual';
   const currentOrgId = (user as any)?.currentOrgId;
   
@@ -113,6 +114,7 @@ function Router() {
     (user as any)?.userType === 'org_owner' ? 'OrgOwnerDashboard' : 
     (user as any)?.userType === 'coach' ? 'CoachOrgDashboard'
       : 'UserHome');
+
   return (
     <>
       <Switch>
@@ -210,9 +212,12 @@ function Router() {
             <Route path="/terms" component={TermsAndDisclaimer} />
             <Route path="/mobile" component={MobileApp} />
             <Route path="/workouts" component={WorkoutsPage} />
+            {/* Catch-all: redirect unauthenticated users to landing page instead of 404 */}
+            <Route>{() => { window.location.href = '/'; return null; }}</Route>
           </>
         )}
-        <Route component={NotFound} />
+        {/* Only show 404 for authenticated users on unknown routes */}
+        {isAuthenticated && <Route component={NotFound} />}
       </Switch>
     </>
   );

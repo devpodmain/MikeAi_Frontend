@@ -3010,6 +3010,7 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // Simple database sync endpoint - no complex logic
+  // Only updates fields that have actual values - empty strings are skipped to preserve existing data
   app.post('/api/db/sync-profile', requireAuth, async (req: any, res) => {
     try {
       const userId = getUserId(req);
@@ -3019,39 +3020,57 @@ Always prioritize health, safety, and sustainable practices.`;
       
       const profileData = req.body;
       
-      // Prepare data for database storage using camelCase field names for Drizzle
-      const dbData = {
-        userId: userId,
-        fullName: profileData.fullName || null,
-        dateOfBirth: profileData.dateOfBirth || null,
-        gender: profileData.gender || null,
-        height: profileData.height ? parseFloat(profileData.height).toString() : undefined,
-        weight: profileData.weight ? parseFloat(profileData.weight).toString() : undefined,
-        activityLevel: profileData.activityLevel || null,
-        fitnessGoal: profileData.fitnessGoal || null,
-        targetWeight: profileData.targetWeight ? parseFloat(profileData.targetWeight).toString() : undefined,
-        dailyCalorieGoal: profileData.dailyCalorieGoal ? parseInt(profileData.dailyCalorieGoal) : undefined,
-        dietType: profileData.dietType || null,
-        allergies: profileData.allergies || [],
-        dislikedFoods: profileData.dislikedFoods || null,
-        preferredCuisines: profileData.preferredCuisines || [],
-        mealsPerDay: profileData.mealsPerDay || null,
-        intermittentFasting: profileData.intermittentFasting || false,
-        breakfastTime: profileData.breakfastTime || null,
-        lunchTime: profileData.lunchTime || null,
-        dinnerTime: profileData.dinnerTime || null,
-        chronicConditions: profileData.chronicConditions || [],
-        supplementsTaken: profileData.supplementsTaken || null,
-        stressLevel: profileData.stressLevel || null,
-        sleepDuration: profileData.sleepDuration ? parseFloat(profileData.sleepDuration).toString() : undefined,
-        waterIntakeGoal: profileData.waterIntakeGoal ? parseFloat(profileData.waterIntakeGoal).toString() : undefined,
+      // Validate that fullName is not empty (required field)
+      if (!profileData.fullName || profileData.fullName.trim() === '') {
+        return res.status(400).json({ message: "Full name is required" });
+      }
+      
+      // Helper function to check if value should be included
+      // Only include non-empty values to avoid overwriting existing data with empty strings
+      const hasValue = (val: any): boolean => {
+        if (val === undefined || val === null) return false;
+        if (typeof val === 'string' && val.trim() === '') return false;
+        if (Array.isArray(val) && val.length === 0) return false;
+        return true;
       };
+      
+      // Build dbData object only with fields that have actual values
+      const dbData: Record<string, any> = {
+        userId: userId,
+      };
+      
+      // Required field - always include
+      dbData.fullName = profileData.fullName.trim();
+      
+      // Optional fields - only include if they have actual values
+      if (hasValue(profileData.dateOfBirth)) dbData.dateOfBirth = profileData.dateOfBirth;
+      if (hasValue(profileData.gender)) dbData.gender = profileData.gender;
+      if (hasValue(profileData.height)) dbData.height = parseFloat(profileData.height).toString();
+      if (hasValue(profileData.weight)) dbData.weight = parseFloat(profileData.weight).toString();
+      if (hasValue(profileData.activityLevel)) dbData.activityLevel = profileData.activityLevel;
+      if (hasValue(profileData.fitnessGoal)) dbData.fitnessGoal = profileData.fitnessGoal;
+      if (hasValue(profileData.targetWeight)) dbData.targetWeight = parseFloat(profileData.targetWeight).toString();
+      if (hasValue(profileData.dailyCalorieGoal)) dbData.dailyCalorieGoal = parseInt(profileData.dailyCalorieGoal);
+      if (hasValue(profileData.dietType)) dbData.dietType = profileData.dietType;
+      if (hasValue(profileData.allergies)) dbData.allergies = profileData.allergies;
+      if (hasValue(profileData.dislikedFoods)) dbData.dislikedFoods = profileData.dislikedFoods;
+      if (hasValue(profileData.preferredCuisines)) dbData.preferredCuisines = profileData.preferredCuisines;
+      if (hasValue(profileData.mealsPerDay)) dbData.mealsPerDay = profileData.mealsPerDay;
+      if (profileData.intermittentFasting !== undefined) dbData.intermittentFasting = profileData.intermittentFasting;
+      if (hasValue(profileData.breakfastTime)) dbData.breakfastTime = profileData.breakfastTime;
+      if (hasValue(profileData.lunchTime)) dbData.lunchTime = profileData.lunchTime;
+      if (hasValue(profileData.dinnerTime)) dbData.dinnerTime = profileData.dinnerTime;
+      if (hasValue(profileData.chronicConditions)) dbData.chronicConditions = profileData.chronicConditions;
+      if (hasValue(profileData.supplementsTaken)) dbData.supplementsTaken = profileData.supplementsTaken;
+      if (hasValue(profileData.stressLevel)) dbData.stressLevel = profileData.stressLevel;
+      if (hasValue(profileData.sleepDuration)) dbData.sleepDuration = parseFloat(profileData.sleepDuration).toString();
+      if (hasValue(profileData.waterIntakeGoal)) dbData.waterIntakeGoal = parseFloat(profileData.waterIntakeGoal).toString();
 
       // Check if profile exists
       const existingProfile = await storage.getUserProfile(userId);
       
       if (existingProfile) {
-        // Update existing profile
+        // Update existing profile - only with fields that have values
         await storage.updateUserProfile(userId, dbData);
       } else {
         // Create new profile
@@ -3060,6 +3079,7 @@ Always prioritize health, safety, and sustainable practices.`;
 
       res.json({ success: true });
     } catch (error) {
+      console.error('Profile sync error:', error);
       res.status(500).json({ message: "Sync failed" });
     }
   });
