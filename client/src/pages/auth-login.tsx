@@ -13,7 +13,9 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
+import { SiGoogle, SiX } from "react-icons/si";
+import { useEffect } from "react";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -37,6 +39,33 @@ export default function AuthLogin() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("login");
+  const [oauthError, setOauthError] = useState<string | null>(null);
+
+  // Check for OAuth error in URL params
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const error = urlParams.get("error");
+    if (error) {
+      const errorMessages: Record<string, string> = {
+        google_auth_failed: "Google sign-in failed. Please try again.",
+        twitter_auth_failed: "Twitter sign-in failed. Please try again.",
+        session_failed: "Session creation failed. Please try again.",
+        org_user_social_login: "Social login is only available for individual users. Organization members (coaches, clients, owners) should use email login instead.",
+      };
+      setOauthError(errorMessages[error] || "Authentication failed. Please try again.");
+      // Clear the error from URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // Social login handlers
+  const handleGoogleLogin = () => {
+    window.location.href = "/api/auth/google";
+  };
+
+  const handleTwitterLogin = () => {
+    window.location.href = "/api/auth/twitter";
+  };
 
   const loginForm = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -179,6 +208,48 @@ export default function AuthLogin() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* OAuth Error Alert */}
+            {oauthError && (
+              <Alert variant="destructive" className="mb-4">
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>{oauthError}</AlertDescription>
+              </Alert>
+            )}
+
+            {/* Social Login Buttons */}
+            <div className="space-y-3">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 h-11"
+                onClick={handleGoogleLogin}
+                data-testid="button-google-login"
+              >
+                <SiGoogle className="h-5 w-5" />
+                Continue with Google
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2 h-11"
+                onClick={handleTwitterLogin}
+                data-testid="button-twitter-login"
+              >
+                <SiX className="h-5 w-5" />
+                Continue with X (Twitter)
+              </Button>
+            </div>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or continue with email</span>
+              </div>
+            </div>
+
             {/* Email/Password Forms */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="grid w-full grid-cols-2">
@@ -332,26 +403,21 @@ export default function AuthLogin() {
                 </Form>
               </TabsContent>
             </Tabs>
-            
-            {/* Divider */}
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">or</span>
-              </div>
-            </div>
-            
+
             {/* Organization Login Link */}
-            <Button
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/org-member-login")}
-              data-testid="button-org-login"
-            >
-              Organization Member Login
-            </Button>
+            <div className="pt-4 border-t border-gray-200">
+              <p className="text-center text-sm text-gray-500 mb-3">
+                Are you part of an organization?
+              </p>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={() => navigate("/org-member-login")}
+                data-testid="button-org-login"
+              >
+                Organization Member Login
+              </Button>
+            </div>
           </CardContent>
         </Card>
 

@@ -39,7 +39,7 @@ export const users = pgTable("users", {
   }).default("individual"),
   currentOrgId: integer("current_org_id"), // References organizations.id
   password: varchar("password"), // For email/password auth
-  authProvider: varchar("auth_provider", { enum: ["replit", "google", "email", "mock"] }).default("replit"),
+  authProvider: varchar("auth_provider", { enum: ["replit", "google", "email", "mock", "twitter"] }).default("replit"),
   googleId: varchar("google_id"),
   // Subscription fields
   stripeCustomerId: varchar("stripe_customer_id"),
@@ -1406,3 +1406,40 @@ export const insertUserPreferencesSchema = createInsertSchema(userPreferences).o
 
 export type UserPreferences = typeof userPreferences.$inferSelect;
 export type InsertUserPreferences = z.infer<typeof insertUserPreferencesSchema>;
+
+// Auth identities table - for tracking multiple OAuth providers per user
+export const authIdentities = pgTable("auth_identities", {
+  id: serial("id").primaryKey(),
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  provider: varchar("provider", { 
+    enum: ["email", "google", "twitter"] 
+  }).notNull(),
+  providerUserId: varchar("provider_user_id").notNull(), // The user's ID from the OAuth provider
+  email: varchar("email"), // Email from the OAuth provider (for linking)
+  accessToken: text("access_token"), // OAuth access token (encrypted in production)
+  refreshToken: text("refresh_token"), // OAuth refresh token (encrypted in production)
+  tokenExpiresAt: timestamp("token_expires_at"), // When the access token expires
+  profileData: jsonb("profile_data"), // Additional profile data from provider
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_auth_identities_user").on(table.userId),
+  index("idx_auth_identities_provider").on(table.provider),
+  uniqueIndex("idx_auth_identities_provider_user").on(table.provider, table.providerUserId),
+]);
+
+export const authIdentitiesRelations = relations(authIdentities, ({ one }) => ({
+  user: one(users, {
+    fields: [authIdentities.userId],
+    references: [users.id],
+  }),
+}));
+
+export const insertAuthIdentitySchema = createInsertSchema(authIdentities).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AuthIdentity = typeof authIdentities.$inferSelect;
+export type InsertAuthIdentity = z.infer<typeof insertAuthIdentitySchema>;

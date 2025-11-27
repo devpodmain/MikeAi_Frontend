@@ -1,4 +1,6 @@
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as GoogleStrategy } from "passport-google-oauth20";
+import { Strategy as TwitterStrategy } from "@superfaceai/passport-twitter-oauth2";
 import bcrypt from "bcryptjs";
 import passport from "passport";
 import session from "express-session";
@@ -6,6 +8,9 @@ import type { Express, RequestHandler } from "express";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 import { randomBytes } from "crypto";
+import { db } from "./db";
+import { authIdentities, users } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
@@ -24,7 +29,6 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
       maxAge: sessionTtl,
     },
   });
@@ -44,6 +48,126 @@ async function createEmailUser(email: string, password: string, firstName?: stri
     authProvider: "email",
     userType,
   });
+}
+
+// Custom error for organization users trying to use social login
+class OAuthNotAllowedError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "OAuthNotAllowedError";
+  }
+}
+
+// Helper function to find or create user from OAuth profile
+// IMPORTANT: Social login is ONLY allowed for individual users, not organization members
+async function findOrCreateOAuthUser(
+  provider: "google" | "twitter",
+  providerUserId: string,
+  email: string | null,
+  firstName: string | null,
+  lastName: string | null,
+  profileData: any,
+  accessToken?: string,
+  refreshToken?: string
+) {
+  // First, check if this provider account is already linked
+  const existingIdentity = await db.query.authIdentities.findFirst({
+    where: and(
+      eq(authIdentities.provider, provider),
+      eq(authIdentities.providerUserId, providerUserId)
+    ),
+  });
+
+  if (existingIdentity) {
+    // Get the linked user and verify they're an individual user
+    const user = await storage.getUser(existingIdentity.userId);
+    if (user) {
+      // Check if user is an individual user (social login restriction)
+      if (user.userType !== "individual") {
+        throw new OAuthNotAllowedError(
+          "Social login is only available for individual users. Organization members should use email login."
+        );
+      }
+      
+      // Update tokens if provided
+      if (accessToken || refreshToken) {
+        await db.update(authIdentities)
+          .set({
+            accessToken: accessToken || existingIdentity.accessToken,
+            refreshToken: refreshToken || existingIdentity.refreshToken,
+            updatedAt: new Date(),
+          })
+          .where(eq(authIdentities.id, existingIdentity.id));
+      }
+      
+      return { ...user, authProvider: provider };
+    }
+  }
+
+  // If email is provided, check if a user with this email already exists
+  let user = null;
+  if (email) {
+    user = await storage.getUserByEmail(email);
+  }
+
+  if (user) {
+    // SECURITY: Only allow linking to individual users
+    // Organization users (org_owner, coach, org_client) must use email login
+    if (user.userType !== "individual") {
+      throw new OAuthNotAllowedError(
+        "This email is associated with an organization account. Social login is only available for individual users. Please use email login instead."
+      );
+    }
+    
+    // Link this OAuth account to the existing individual user
+    await db.insert(authIdentities).values({
+      userId: user.id,
+      provider,
+      providerUserId,
+      email,
+      accessToken,
+      refreshToken,
+      profileData,
+    });
+    return { ...user, authProvider: provider };
+  }
+
+  // Create a new individual user (social login always creates individual users)
+  const userId = randomBytes(16).toString("hex");
+  const newUser = await storage.upsertUser({
+    id: userId,
+    email: email || undefined,
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+    authProvider: provider,
+    userType: "individual",
+  });
+
+  // Create the auth identity
+  await db.insert(authIdentities).values({
+    userId,
+    provider,
+    providerUserId,
+    email,
+    accessToken,
+    refreshToken,
+    profileData,
+  });
+
+  return { ...newUser, authProvider: provider };
+}
+
+// Get the base URL for OAuth callbacks
+function getBaseUrl(req: any): string {
+  // In production, use the configured domain
+  if (process.env.NODE_ENV === "production") {
+    return process.env.APP_URL || `https://${req.get("host")}`;
+  }
+  // In development, use the Replit dev domain or localhost
+  if (process.env.REPL_SLUG && process.env.REPL_OWNER) {
+    return `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`;
+  }
+  return `http://${req.get("host")}`;
 }
 
 async function verifyEmailUser(email: string, password: string) {
@@ -78,6 +202,87 @@ export async function setupAuth(app: Express) {
     }
   }));
 
+  // Google OAuth Strategy
+  if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+    passport.use(new GoogleStrategy({
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: "/api/auth/google/callback",
+      scope: ["profile", "email"],
+    }, async (accessToken, refreshToken, profile, done) => {
+      try {
+        const email = profile.emails?.[0]?.value || null;
+        const firstName = profile.name?.givenName || null;
+        const lastName = profile.name?.familyName || null;
+        
+        const user = await findOrCreateOAuthUser(
+          "google",
+          profile.id,
+          email,
+          firstName,
+          lastName,
+          { displayName: profile.displayName, photos: profile.photos },
+          accessToken,
+          refreshToken
+        );
+        
+        done(null, user);
+      } catch (error) {
+        // Handle organization users trying to use social login
+        if (error instanceof OAuthNotAllowedError) {
+          // Use done(null, false, info) pattern so callback can handle appropriately
+          return done(null, false, { message: "org_user_social_login" });
+        }
+        done(error as Error, undefined);
+      }
+    }));
+    console.log("✓ Google OAuth strategy configured");
+  } else {
+    console.log("⚠ Google OAuth not configured (missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET)");
+  }
+
+  // Twitter OAuth Strategy
+  if (process.env.TWITTER_CLIENT_ID && process.env.TWITTER_CLIENT_SECRET) {
+    passport.use(new TwitterStrategy({
+      clientID: process.env.TWITTER_CLIENT_ID,
+      clientSecret: process.env.TWITTER_CLIENT_SECRET,
+      callbackURL: "/api/auth/twitter/callback",
+      clientType: "confidential",
+    }, async (accessToken: string, refreshToken: string, profile: any, done: any) => {
+      try {
+        // Twitter may not always provide email
+        const email = profile.emails?.[0]?.value || null;
+        const displayName = profile.displayName || profile.username || "";
+        const nameParts = displayName.split(" ");
+        const firstName = nameParts[0] || null;
+        const lastName = nameParts.slice(1).join(" ") || null;
+        
+        const user = await findOrCreateOAuthUser(
+          "twitter",
+          profile.id,
+          email,
+          firstName,
+          lastName,
+          { username: profile.username, displayName: profile.displayName, photos: profile.photos },
+          accessToken,
+          refreshToken
+        );
+        
+        done(null, user);
+      } catch (error) {
+        // Handle organization users trying to use social login
+        if (error instanceof OAuthNotAllowedError) {
+          // Use done(null, false, info) pattern so callback can handle appropriately
+          return done(null, false, { message: "org_user_social_login" });
+        }
+        done(error as Error, undefined);
+      }
+    }));
+    console.log("✓ Twitter OAuth strategy configured");
+  } else {
+    console.log("⚠ Twitter OAuth not configured (missing TWITTER_CLIENT_ID or TWITTER_CLIENT_SECRET)");
+  }
+
   passport.serializeUser((user: any, cb) => {
     // For org members, store all session data since they're not in users table
     if (user.authProvider === 'org_member') {
@@ -105,6 +310,76 @@ export async function setupAuth(app: Express) {
     } catch (error) {
       cb(error, false);
     }
+  });
+
+  // Google OAuth routes
+  app.get("/api/auth/google", (req, res, next) => {
+    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+      return res.status(501).json({ error: "Google OAuth not configured" });
+    }
+    passport.authenticate("google", { scope: ["profile", "email"] })(req, res, next);
+  });
+
+  app.get("/api/auth/google/callback", (req, res, next) => {
+    passport.authenticate("google", { failureRedirect: "/signin?error=google_auth_failed" }, (err: any, user: any, info: any) => {
+      // Check for organization user restriction (passed via info.message)
+      if (info?.message === "org_user_social_login") {
+        return res.redirect("/signin?error=org_user_social_login");
+      }
+      
+      if (err) {
+        console.error("Google OAuth error:", err);
+        return res.redirect("/signin?error=google_auth_failed");
+      }
+      
+      if (!user) {
+        return res.redirect("/signin?error=google_auth_failed");
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Google login session error:", loginErr);
+          return res.redirect("/signin?error=session_failed");
+        }
+        // Redirect to dashboard or profile setup based on user status
+        res.redirect("/");
+      });
+    })(req, res, next);
+  });
+
+  // Twitter OAuth routes
+  app.get("/api/auth/twitter", (req, res, next) => {
+    if (!process.env.TWITTER_CLIENT_ID || !process.env.TWITTER_CLIENT_SECRET) {
+      return res.status(501).json({ error: "Twitter OAuth not configured" });
+    }
+    passport.authenticate("twitter")(req, res, next);
+  });
+
+  app.get("/api/auth/twitter/callback", (req, res, next) => {
+    passport.authenticate("twitter", { failureRedirect: "/signin?error=twitter_auth_failed" }, (err: any, user: any, info: any) => {
+      // Check for organization user restriction (passed via info.message)
+      if (info?.message === "org_user_social_login") {
+        return res.redirect("/signin?error=org_user_social_login");
+      }
+      
+      if (err) {
+        console.error("Twitter OAuth error:", err);
+        return res.redirect("/signin?error=twitter_auth_failed");
+      }
+      
+      if (!user) {
+        return res.redirect("/signin?error=twitter_auth_failed");
+      }
+      
+      req.login(user, (loginErr) => {
+        if (loginErr) {
+          console.error("Twitter login session error:", loginErr);
+          return res.redirect("/signin?error=session_failed");
+        }
+        // Redirect to dashboard or profile setup based on user status
+        res.redirect("/");
+      });
+    })(req, res, next);
   });
 
   // Email/password login route (returns JSON for SPA)
