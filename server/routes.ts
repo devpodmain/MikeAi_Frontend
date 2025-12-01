@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./auth";
 import { AdminAuth, requireAdminAuth, requireSuperAdmin } from "./adminAuth";
 import cookieParser from 'cookie-parser';
-import { eq, sql, and, or, desc, inArray, isNull } from "drizzle-orm";
+import { eq, sql, and, or, desc, inArray, isNull, gte } from "drizzle-orm";
 import { alias } from "drizzle-orm/pg-core";
 import { db } from "./db";
 import { z } from "zod";
@@ -40,6 +40,7 @@ import {
   orgMealPlans,
   orgWorkoutPlans,
   orgMessages,
+  payments,
 } from "@shared/schema";
 import Stripe from "stripe";
 import { registerProfileRoutes } from "./routes/profile";
@@ -2590,6 +2591,61 @@ Always prioritize health, safety, and sustainable practices.`;
       res.json(payments);
     } catch (error: any) {
       res.status(500).json({ message: "Failed to fetch payments: " + error.message });
+    }
+  });
+
+  // Admin endpoint: Sync all users with active payments to have correct subscription status
+  // This is a one-time fix for users who have payments but incorrect subscription status
+  // Requires admin authentication
+  app.post('/api/admin/sync-subscriptions', requireAdminAuth, async (req: any, res) => {
+    try {
+      // Get all active payments (non-expired)
+      const now = new Date();
+      const activePayments = await db
+        .select()
+        .from(payments)
+        .where(
+          and(
+            eq(payments.status, 'succeeded'),
+            gte(payments.expiresAt, now)
+          )
+        );
+
+      let syncedCount = 0;
+      let alreadyCorrectCount = 0;
+      const errors: string[] = [];
+
+      for (const payment of activePayments) {
+        try {
+          const user = await storage.getUser(payment.userId);
+          if (user) {
+            if (user.subscriptionStatus !== 'active' || user.subscriptionTier !== 'plus') {
+              await storage.updateUserSubscription(payment.userId, {
+                subscriptionStatus: 'active',
+                subscriptionTier: 'plus'
+              });
+              syncedCount++;
+              console.log(`[SYNC] Updated user ${payment.userId} to active/plus`);
+            } else {
+              alreadyCorrectCount++;
+            }
+          }
+        } catch (err: any) {
+          errors.push(`User ${payment.userId}: ${err.message}`);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Synced ${syncedCount} users, ${alreadyCorrectCount} already correct`,
+        totalActivePayments: activePayments.length,
+        syncedCount,
+        alreadyCorrectCount,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error('Sync subscriptions error:', error);
+      res.status(500).json({ message: "Failed to sync subscriptions: " + error.message });
     }
   });
 
