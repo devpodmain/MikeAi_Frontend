@@ -1081,11 +1081,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Auto-heal: update the users table if it's out of sync
           if (dbUser.subscriptionStatus !== 'active') {
-            await storage.updateUserSubscription(dbUser.id, {
-              subscriptionStatus: 'active',
-              subscriptionTier: 'plus'
-            });
+            try {
+              await storage.updateUserSubscription(dbUser.id, {
+                subscriptionStatus: 'active',
+                subscriptionTier: 'plus'
+              });
+            } catch (updateError) {
+              console.error('Failed to auto-heal user subscription:', updateError);
+            }
           }
+        } else {
+          // No active payment - check if user ever had a payment (to distinguish from trial users)
+          const allPayments = await storage.getUserPayments(dbUser.id);
+          const hadPreviousPayment = allPayments && allPayments.length > 0;
+          
+          if (hadPreviousPayment) {
+            // User had a payment that expired - set to canceled/free
+            effectiveSubscriptionStatus = 'canceled';
+            effectiveSubscriptionTier = 'free';
+            
+            // Auto-heal: update the users table if it's out of sync
+            if (dbUser.subscriptionStatus !== 'canceled' || dbUser.subscriptionTier !== 'free') {
+              try {
+                await storage.updateUserSubscription(dbUser.id, {
+                  subscriptionStatus: 'canceled',
+                  subscriptionTier: 'free'
+                });
+                console.log(`[EXPIRY SYNC] Updated user ${dbUser.id} to canceled/free on login`);
+              } catch (updateError) {
+                console.error('Failed to auto-heal expired subscription:', updateError);
+              }
+            }
+          }
+          // If no previous payment, user is still on trial - keep their current status
         }
       }
       
@@ -2563,6 +2591,41 @@ Always prioritize health, safety, and sustainable practices.`;
               }
             }
           }
+        } else {
+          // EXPIRY AUTO-HEALING: No active payment found for individual user
+          // If user record shows active/plus but they have no active payment, they've expired
+          // Check if they ever had a payment (to distinguish from trial users)
+          const allPayments = await storage.getUserPayments(userId);
+          const hadPreviousPayment = allPayments && allPayments.length > 0;
+          
+          if (hadPreviousPayment) {
+            // User had a payment that expired - set to canceled/free
+            subscriptionStatus = 'canceled';
+            subscriptionTier = 'free';
+            isExpired = true;
+            
+            // Find the most recent payment to show when it expired
+            const sortedPayments = allPayments.sort((a, b) => 
+              new Date(b.expiresAt || 0).getTime() - new Date(a.expiresAt || 0).getTime()
+            );
+            if (sortedPayments[0]?.expiresAt) {
+              expiresAt = sortedPayments[0].expiresAt;
+            }
+            
+            // Sync user record if it's out of date
+            if (user.subscriptionStatus !== 'canceled' || user.subscriptionTier !== 'free') {
+              try {
+                await storage.updateUserSubscription(userId, {
+                  subscriptionStatus: 'canceled',
+                  subscriptionTier: 'free'
+                });
+                console.log(`[EXPIRY SYNC] Updated user ${userId} to canceled/free (payment expired)`);
+              } catch (updateError) {
+                console.error('Failed to auto-heal expired subscription:', updateError);
+              }
+            }
+          }
+          // If no previous payment, user is still on trial - keep their current status
         }
       }
 
