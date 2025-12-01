@@ -377,10 +377,9 @@ export const mobileUtils = {
   }
 };
 
-// Setup install prompt listener
+// Setup install prompt listener - let browser show default install banner
 if (typeof window !== 'undefined') {
   window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
     mobileUtils.installPrompt = e;
   });
 }

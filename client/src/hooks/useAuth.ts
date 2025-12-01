@@ -17,8 +17,14 @@ export interface AuthUser extends User {
   trialDaysRemaining?: number;
 }
 
+// Response type from auth endpoint
+interface AuthResponse {
+  user: AuthUser | null;
+  isAuthenticated: boolean;
+}
+
 export function useAuth() {
-  const { data: user, isLoading, error } = useQuery<AuthUser | null>({
+  const { data, isLoading, error } = useQuery<AuthUser | AuthResponse | null>({
     queryKey: ["/api/auth/user"],
     retry: false,
     retryOnMount: false,
@@ -27,13 +33,13 @@ export function useAuth() {
     gcTime: 0,
   });
 
-  // Don't treat 401 errors as loading states
-  const isActuallyLoading = isLoading && !error;
+  // Handle both old format (user object directly) and new format ({ user, isAuthenticated })
+  const user = data && 'isAuthenticated' in data ? data.user : (data as AuthUser | null);
   const isAuthenticated = !!user && !error;
 
   return {
     user,
-    isLoading: isActuallyLoading,
+    isLoading,
     isAuthenticated,
     error,
   };

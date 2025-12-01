@@ -1018,12 +1018,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/auth/user', async (req: any, res) => {
     try {
       if (!req.isAuthenticated || !req.isAuthenticated()) {
-        return res.status(401).json({ message: "Not authenticated" });
+        return res.status(200).json({ user: null, isAuthenticated: false });
       }
 
       const user = req.user;
       if (!user || !user.id) {
-        return res.status(401).json({ message: "Not authenticated" });
+        return res.status(200).json({ user: null, isAuthenticated: false });
       }
 
       // Handle org members (coaches/clients) differently
