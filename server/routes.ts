@@ -2541,6 +2541,21 @@ Always prioritize health, safety, and sustainable practices.`;
           const diffTime = expiry.getTime() - now.getTime();
           daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
           isExpired = daysRemaining <= 0;
+          
+          // AUTO-HEALING: If user has non-expired payment, they should be 'active' with 'plus' tier
+          // Individual users only have one tier: 'plus' ($4.99 for 30 days)
+          if (!isExpired) {
+            subscriptionStatus = 'active';
+            subscriptionTier = 'plus';
+            
+            // Sync user record if it's out of date (only update to known valid values)
+            if (user.subscriptionStatus !== 'active' || user.subscriptionTier !== 'plus') {
+              await storage.updateUserSubscription(userId, {
+                subscriptionStatus: 'active',
+                subscriptionTier: 'plus'
+              });
+            }
+          }
         }
       }
 
