@@ -2518,12 +2518,20 @@ Always prioritize health, safety, and sustainable practices.`;
   });
 
   // Get comprehensive subscription info
-  app.get('/api/user/subscription-info', requireAuth, async (req: any, res) => {
+  // NOTE: Handles auth manually like /api/auth/user to ensure compatibility across all deployments
+  app.get('/api/user/subscription-info', async (req: any, res) => {
     try {
-      const userId = getUserId(req);
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
+      // Check authentication manually (same pattern as /api/auth/user)
+      if (!req.isAuthenticated || !req.isAuthenticated()) {
+        return res.status(401).json({ message: "Not authenticated" });
       }
+      
+      const sessionUser = req.user;
+      if (!sessionUser || !sessionUser.id) {
+        return res.status(401).json({ message: "Unauthorized - no user in session" });
+      }
+      
+      const userId = sessionUser.id;
 
       // Get user details
       const user = await storage.getUser(userId);
