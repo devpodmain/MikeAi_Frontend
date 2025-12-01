@@ -2549,11 +2549,17 @@ Always prioritize health, safety, and sustainable practices.`;
             subscriptionTier = 'plus';
             
             // Sync user record if it's out of date (only update to known valid values)
+            // Wrapped in try-catch to prevent endpoint crash if update fails
             if (user.subscriptionStatus !== 'active' || user.subscriptionTier !== 'plus') {
-              await storage.updateUserSubscription(userId, {
-                subscriptionStatus: 'active',
-                subscriptionTier: 'plus'
-              });
+              try {
+                await storage.updateUserSubscription(userId, {
+                  subscriptionStatus: 'active',
+                  subscriptionTier: 'plus'
+                });
+              } catch (updateError) {
+                console.error('Failed to auto-heal user subscription record:', updateError);
+                // Continue anyway - we still return correct status based on payment
+              }
             }
           }
         }
