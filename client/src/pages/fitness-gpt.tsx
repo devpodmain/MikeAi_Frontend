@@ -2,12 +2,13 @@ import { Sparkles, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useTrialGuard } from '@/hooks/useTrialGuard';
 import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
+import { SubscriptionRequiredLockout } from '@/components/subscription-required-lockout';
 import { EnhancedChat, type ChatMessage } from '@/components/enhanced-chat';
 import { sendFitnessChat } from '@/lib/fitnessChatApi';
 
 export default function FitnessGPT() {
   const { user } = useAuth();
-  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  const { isLoading: trialLoading, canAccessSubscriptionOnly, isTrialExpired } = useTrialGuard();
   
   if (trialLoading) {
     return (
@@ -17,8 +18,12 @@ export default function FitnessGPT() {
     );
   }
   
-  if (isTrialExpired && !canAccessPremium) {
+  if (isTrialExpired) {
     return <TrialExpiredLockout featureName="Fitness GPT" />;
+  }
+  
+  if (!canAccessSubscriptionOnly) {
+    return <SubscriptionRequiredLockout featureName="Fitness GPT" />;
   }
 
   const handleSendMessage = async (message: string, history: ChatMessage[], attachments?: File[]) => {

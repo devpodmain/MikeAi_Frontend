@@ -24,6 +24,7 @@ import OrgSubscription from "@/pages/org-subscription";
 import OrgSubscriptionSuccess from "@/pages/org-subscription-success";
 import Messages from "@/pages/messages";
 import TermsAndDisclaimer from "@/pages/terms-and-disclaimer";
+import PrivacyPolicy from "@/pages/privacy-policy";
 import MockLogin from "@/pages/mock-login";
 import LandingWithLogin from "@/pages/landing-with-login";
 import MobileApp from "@/pages/mobile-app";
@@ -163,6 +164,7 @@ function Router() {
             <Route path="/org/subscription-success" component={OrgSubscriptionSuccess} />
             <Route path="/purchase-history" component={PurchaseHistory} />
             <Route path="/terms" component={TermsAndDisclaimer} />
+            <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/mobile" component={MobileApp} />
             <Route path="/create-plan" component={CreatePlan} />
             <Route path="/analytics" component={Analytics} />
@@ -210,6 +212,7 @@ function Router() {
             <Route path="/reset-password" component={ResetPassword} />
             <Route path="/subscription" component={Subscription} />
             <Route path="/terms" component={TermsAndDisclaimer} />
+            <Route path="/privacy" component={PrivacyPolicy} />
             <Route path="/mobile" component={MobileApp} />
             <Route path="/workouts" component={WorkoutsPage} />
             {/* Catch-all: redirect unauthenticated users to landing page instead of 404 */}

@@ -6,13 +6,14 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
 import { useTrialGuard } from '@/hooks/useTrialGuard';
 import { TrialExpiredLockout } from '@/components/trial-expired-lockout';
+import { SubscriptionRequiredLockout } from '@/components/subscription-required-lockout';
 import { useToast } from '@/hooks/use-toast';
 import { EnhancedChat, type ChatMessage } from '@/components/enhanced-chat';
 import { getSupplementSuggestions } from '@/lib/supplementsApi';
 
 export default function SupplementsSuggest() {
   const { user } = useAuth();
-  const { isLoading: trialLoading, canAccessPremium, isTrialExpired } = useTrialGuard();
+  const { isLoading: trialLoading, canAccessSubscriptionOnly, isTrialExpired } = useTrialGuard();
   
   if (trialLoading) {
     return (
@@ -22,8 +23,12 @@ export default function SupplementsSuggest() {
     );
   }
   
-  if (isTrialExpired && !canAccessPremium) {
+  if (isTrialExpired) {
     return <TrialExpiredLockout featureName="Supplements AI" />;
+  }
+  
+  if (!canAccessSubscriptionOnly) {
+    return <SubscriptionRequiredLockout featureName="Supplements AI" />;
   }
   const { toast } = useToast();
   const [showTCModal, setShowTCModal] = useState(true);

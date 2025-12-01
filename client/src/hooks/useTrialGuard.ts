@@ -5,6 +5,7 @@ export interface TrialGuardResult {
   isTrialExpired: boolean;
   isSubscribed: boolean;
   canAccessPremium: boolean;
+  canAccessSubscriptionOnly: boolean;
   trialDaysRemaining: number;
 }
 
@@ -17,6 +18,7 @@ export function useTrialGuard(): TrialGuardResult {
       isTrialExpired: false,
       isSubscribed: false,
       canAccessPremium: false,
+      canAccessSubscriptionOnly: false,
       trialDaysRemaining: 0,
     };
   }
@@ -26,12 +28,14 @@ export function useTrialGuard(): TrialGuardResult {
   const trialDaysRemaining = user.trialDaysRemaining || 0;
   
   const canAccessPremium = isSubscribed || (!isTrialExpired && trialDaysRemaining > 0);
+  const canAccessSubscriptionOnly = isSubscribed;
 
   return {
     isLoading: false,
     isTrialExpired,
     isSubscribed,
     canAccessPremium,
+    canAccessSubscriptionOnly,
     trialDaysRemaining,
   };
 }

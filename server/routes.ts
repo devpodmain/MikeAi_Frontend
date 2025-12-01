@@ -1066,16 +1066,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // For individual users, check for active payments to determine true subscription status
+      // This ensures existing paid subscribers are recognized even if webhook didn't update the users table
+      let effectiveSubscriptionStatus = dbUser.subscriptionStatus;
+      let effectiveSubscriptionTier = dbUser.subscriptionTier;
+      
+      if (dbUser.userType === 'individual' || !dbUser.userType) {
+        const activePayment = await storage.getUserActivePayment(dbUser.id);
+        if (activePayment && activePayment.expiresAt && new Date() < activePayment.expiresAt) {
+          // User has a valid active payment - they are a subscriber
+          effectiveSubscriptionStatus = 'active';
+          effectiveSubscriptionTier = 'plus';
+          
+          // Auto-heal: update the users table if it's out of sync
+          if (dbUser.subscriptionStatus !== 'active') {
+            await storage.updateUserSubscription(dbUser.id, {
+              subscriptionStatus: 'active',
+              subscriptionTier: 'plus'
+            });
+          }
+        }
+      }
+      
+      const isTrialExpired = effectiveSubscriptionStatus === "trial" && dbUser.trialEndsAt && new Date() >= dbUser.trialEndsAt;
+      
       const responseData: any = {
         id: dbUser.id,
         email: dbUser.email,
         firstName: dbUser.firstName,
         lastName: dbUser.lastName,
         userType: dbUser.userType,
-        subscriptionStatus: dbUser.subscriptionStatus,
-        subscriptionTier: dbUser.subscriptionTier,
+        subscriptionStatus: effectiveSubscriptionStatus,
+        subscriptionTier: effectiveSubscriptionTier,
         trialEndsAt: dbUser.trialEndsAt,
-        trialExpired: dbUser.subscriptionStatus === "trial" && dbUser.trialEndsAt && new Date() >= dbUser.trialEndsAt,
+        trialExpired: isTrialExpired,
         trialDaysRemaining: dbUser.trialEndsAt ? Math.max(0, Math.ceil((dbUser.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))) : 0
       };
 
@@ -2473,7 +2497,7 @@ Always prioritize health, safety, and sustainable practices.`;
       }
 
       // Get user details
-      const user = await storage.getUserById(userId);
+      const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
       }
