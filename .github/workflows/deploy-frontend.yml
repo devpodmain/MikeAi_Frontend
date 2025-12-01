@@ -159,11 +159,17 @@ jobs:
           curl -f http://${{ env.VM_IP }}:5000/health || curl -f http://${{ env.VM_IP }}/ || exit 1
           echo "✅ Frontend health check passed"
 
-      - name: Deployment summary
+      - name: Deploy frontend
         run: |
-          echo "## ⚛️ Frontend Deployment Complete" >> $GITHUB_STEP_SUMMARY
-          echo "- **Status**: ✅ Success" >> $GITHUB_STEP_SUMMARY
-          echo "- **VM IP**: ${{ env.VM_IP }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Frontend URL**: http://${{ env.VM_IP }}:5000" >> $GITHUB_STEP_SUMMARY
-          echo "- **Public URL**: http://${{ env.VM_IP }}" >> $GITHUB_STEP_SUMMARY
+          ssh -i ~/.ssh/gcp_key -o StrictHostKeyChecking=no \
+            ${{ secrets.GCP_VM_USER }}@${{ env.VM_IP }} '
+              cd ~/mikeai && \
+              bash scripts/deploy-frontend.sh && \
+              echo "🔄 Restarting frontend service..." && \
+              sudo systemctl restart mikeai-frontend.service && \
+              echo "🔄 Restarting backend service..." && \
+              sudo systemctl restart mikeai-backend.service && \
+              echo "🔄 Reloading Nginx..." && \
+              sudo systemctl reload nginx && \
+              echo "✅ Services restarted & Nginx reloaded" '
 
